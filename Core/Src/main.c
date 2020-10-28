@@ -63,6 +63,8 @@ static void MX_GPIO_Init(void);
 
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
+void init_usb_midi();
+
 int sequence[8] = {69, 71, 72, 74, 76, 77, 79, 80};
 uint8_t midi_channel = 0;
 
