@@ -31,7 +31,8 @@ Core/Src/usbd_midi_if.o: ../Core/Src/usbd_midi_if.c \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
  ../USB_DEVICE/App/usbd_desc.h \
- ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h
+ ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h \
+ ../Core/Inc/midi_def.h
 
 ../Core/Inc/usbd_midi_if.h:
 
@@ -102,3 +103,5 @@ Core/Src/usbd_midi_if.o: ../Core/Src/usbd_midi_if.c \
 ../USB_DEVICE/App/usbd_desc.h:
 
 ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h:
+
+../Core/Inc/midi_def.h:

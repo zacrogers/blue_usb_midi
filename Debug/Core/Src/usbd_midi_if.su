@@ -1,3 +1,6 @@
-usbd_midi_if.c:29:17:MIDI_DataRx	16	static
-usbd_midi_if.c:186:6:send_MIDI_msg	16	static
-usbd_midi_if.c:191:17:MIDI_DataTx	24	static
+usbd_midi_if.c:19:6:midi_note_send	32	static
+usbd_midi_if.c:40:6:midi_note_on	16	static
+usbd_midi_if.c:45:6:midi_note_off	16	static
+usbd_midi_if.c:51:17:MIDI_DataRx	16	static
+usbd_midi_if.c:208:6:send_MIDI_msg	16	static
+usbd_midi_if.c:213:17:MIDI_DataTx	24	static

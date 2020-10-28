@@ -4,21 +4,10 @@
 
 #include "usbd_midi_if.h"
 #include "stm32f1xx_hal.h"
+#include "midi_def.h"
  
 static uint16_t MIDI_DataRx(uint8_t *msg, uint16_t length);
 static uint16_t MIDI_DataTx(uint8_t *msg, uint16_t length);
-
-extern uint8_t key, velocity, ctrl, data;
-extern uint8_t wavesel, velsel, pwm, pwm2, mod, vcf, tun, det, sus, notepos, bend, param;
-extern int8_t transpose, scale;
-extern uint16_t pwval, lfo1rate, lfo2rate, lfo3rate, lfo4rate;
-extern uint8_t paramvalue[256];
-extern void play_note(uint8_t, uint8_t);
-extern void stop_note(uint8_t);
-extern void LocalMidiHandler(uint8_t param, uint8_t data);
-extern float vcfkflvl, envkflvl, oscmix, vcfenvlvl, resonance;
-extern float vcfattack, vcfdecay, vcfsustain, vcfrelease;
-extern float vcaattack, vcadecay, vcasustain, vcarelease;
  
 USBD_MIDI_ItfTypeDef USBD_Interface_fops_FS =
 {
@@ -26,6 +15,39 @@ USBD_MIDI_ItfTypeDef USBD_Interface_fops_FS =
   MIDI_DataTx
 };
  
+
+void midi_note_send(uint8_t channel, bool on, uint8_t note, uint8_t velocity)
+{
+	uint8_t msg[4] = {0};
+
+	if(on)
+	{
+		msg[0] = 0x09;                   /* USB frame */
+		msg[1] = MIDI_NOTE_ON | channel; /* Command and channel */
+	}
+	else
+	{
+		msg[0] = 0x08;                     /* USB frame */
+		msg[1] = MIDI_NOTE_OFF | channel;  /* Command and channel */
+	}
+
+	msg[2] = note > 127 ? 127 : note;
+	msg[3] = velocity > 127 ? 127 : velocity;
+
+	USBD_LL_Transmit (&hUsbDeviceFS, MIDI_IN_EP,(uint8_t*)msg, 4);
+}
+
+void midi_note_on(uint8_t channel, uint8_t note, uint8_t velocity)
+{
+	midi_note_send(channel, true, note, velocity);
+}
+
+void midi_note_off(uint8_t channel, uint8_t note, uint8_t velocity)
+{
+	midi_note_send(channel, false, note, velocity);
+}
+
+
 static uint16_t MIDI_DataRx(uint8_t *msg, uint16_t length)
 {
 //  uint8_t chan = msg[1] & 0xf;

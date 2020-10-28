@@ -61,33 +61,33 @@ static void MX_GPIO_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-extern USBD_HandleTypeDef hUsbDeviceFS;
+//extern USBD_HandleTypeDef hUsbDeviceFS;
 
 void init_usb_midi();
 
 int sequence[8] = {69, 71, 72, 74, 76, 77, 79, 80};
 uint8_t midi_channel = 0;
 
-void midi_note_send(uint8_t channel, bool on, uint8_t note, uint8_t velocity)
-{
-	uint8_t msg[4] = {0};
-
-	if(on)
-	{
-		msg[0] = 0x09;           /* USB frame */
-		msg[1] = 0x90 | channel; /* Command and channel */
-	}
-	else
-	{
-		msg[0] = 0x08;            /* USB frame */
-		msg[1] = 0x80 | channel;  /* Command and channel */
-	}
-
-	msg[2] = note > 127 ? 127 : note;
-	msg[3] = velocity > 127 ? 127 : velocity;
-
-	USBD_LL_Transmit (&hUsbDeviceFS, MIDI_IN_EP,(uint8_t*)msg, 4);
-}
+//void midi_note_send(uint8_t channel, bool on, uint8_t note, uint8_t velocity)
+//{
+//	uint8_t msg[4] = {0};
+//
+//	if(on)
+//	{
+//		msg[0] = 0x09;           /* USB frame */
+//		msg[1] = 0x90 | channel; /* Command and channel */
+//	}
+//	else
+//	{
+//		msg[0] = 0x08;            /* USB frame */
+//		msg[1] = 0x80 | channel;  /* Command and channel */
+//	}
+//
+//	msg[2] = note > 127 ? 127 : note;
+//	msg[3] = velocity > 127 ? 127 : velocity;
+//
+//	USBD_LL_Transmit (&hUsbDeviceFS, MIDI_IN_EP,(uint8_t*)msg, 4);
+//}
 
 /* USER CODE END 0 */
 
@@ -121,6 +121,8 @@ int main(void)
   MX_GPIO_Init();
 //  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
+
+  /* Init usb midi device */
   USBD_Init(&hUsbDeviceFS, &FS_Desc, DEVICE_FS);
   USBD_RegisterClass(&hUsbDeviceFS, &USBD_MIDI);
   USBD_MIDI_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS);
@@ -134,9 +136,9 @@ int main(void)
   {
 	  for(int i = 0; i < 8; ++i)
 	  {
-		  midi_note_send(midi_channel, true, sequence[i], 127);
+		  midi_note_on(midi_channel, sequence[i], 127);
 		  HAL_Delay(1000);
-		  midi_note_send(midi_channel, false, sequence[i], 127);
+		  midi_note_off(midi_channel, sequence[i], 127);
 		  HAL_Delay(1000);
 	  }
 
