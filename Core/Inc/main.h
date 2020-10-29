@@ -32,7 +32,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-//#include "midi.h"
+#include "keypad.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
