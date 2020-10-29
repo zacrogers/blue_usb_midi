@@ -15,7 +15,7 @@
 #define N_ROWS 4
 #define N_COLS 4
 
-typedef (*key_handler) (const char key);
+typedef void (*key_handler) (const char key);
 
 typedef struct
 {

@@ -40,29 +40,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define R1_PORT GPIOA
-#define R1_PIN GPIO_PIN_7
 
-#define R2_PORT GPIOA
-#define R2_PIN GPIO_PIN_6
-
-#define R3_PORT GPIOA
-#define R3_PIN GPIO_PIN_5
-
-#define R4_PORT GPIOA
-#define R4_PIN GPIO_PIN_4
-
-#define C1_PORT GPIOA
-#define C1_PIN GPIO_PIN_3
-
-#define C2_PORT GPIOA
-#define C2_PIN GPIO_PIN_2
-
-#define C3_PORT GPIOA
-#define C3_PIN GPIO_PIN_1
-
-#define C4_PORT GPIOA
-#define C4_PIN GPIO_PIN_0
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -87,7 +65,17 @@ static void MX_I2C1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-Keypad  keypad = {0};
+Keypad  keypad = {.rows_port   = GPIOA,
+		          .row_pins[0] = GPIO_PIN_7,
+				  .row_pins[1] = GPIO_PIN_6,
+				  .row_pins[2] = GPIO_PIN_5,
+				  .row_pins[3] = GPIO_PIN_4,
+				  .cols_port   = GPIOA,
+				  .col_pins[0] = GPIO_PIN_3,
+				  .col_pins[1] = GPIO_PIN_2,
+				  .col_pins[2] = GPIO_PIN_8,
+				  .col_pins[3] = GPIO_PIN_9}; /* PA0 and PA1 need to be used for encoder */
+
 I2C_LCD lcd = {.address = (0x27 << 1),
 			   .columns = 16,
 			   .lines   = 2,
@@ -96,13 +84,16 @@ I2C_LCD lcd = {.address = (0x27 << 1),
 
 State   state = STATE_KEYPAD;
 
-int     sequence[8] = {69, 71, 72, 74, 76, 77, 79, 80};
+int     sequence[8]  = {69, 71, 72, 74, 76, 77, 79, 80};
 uint8_t midi_channel = 0;
-char    note_char[5];   /* For displaying note to lcd */
-char    last_key = 255; /* Store pressed key */
-char    key = 0;        /* Store pressed key */
-uint8_t base_note = 0;
-uint8_t encoder_val = 0;
+char    note_char[5] = {0}; /* For displaying note to lcd */
+char    last_key     = 255; /* Store pressed key */
+char    key          = 0;   /* Store key */
+uint8_t base_note    = 69;  /* Base note for midi transmission*/
+int     encoder_val  = 0;
+int     prev_encoder_val  = 0;
+char    enc_cnt[6];
+
 
 /* USER CODE END 0 */
 
@@ -112,44 +103,32 @@ uint8_t encoder_val = 0;
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-  /* USER CODE END 1 */
+	/* USER CODE BEGIN 1 */
+	/* USER CODE END 1 */
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
+	/* USER CODE BEGIN Init */
 
-  /* USER CODE END Init */
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+	/* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
+	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-//  MX_USB_DEVICE_Init();
-  MX_I2C1_Init();
-  /* USER CODE BEGIN 2 */
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	//  MX_USB_DEVICE_Init();
+	MX_I2C1_Init();
+	/* USER CODE BEGIN 2 */
 
   	/* Init keypad */
-	keypad.rows_port = GPIOA;
-	keypad.row_pins[0] = R1_PIN;
-	keypad.row_pins[1] = R2_PIN;
-	keypad.row_pins[2] = R3_PIN;
-	keypad.row_pins[3] = R4_PIN;
-
-	keypad.cols_port = GPIOA;
-	keypad.col_pins[0] = C1_PIN;
-	keypad.col_pins[1] = C2_PIN;
-	keypad.col_pins[2] = C3_PIN;
-	keypad.col_pins[3] = C4_PIN;
-
 	keypad_init(&keypad);
 
 	/* Init usb midi device */
@@ -165,49 +144,39 @@ int main(void)
 	LCD_SetCursor(&lcd, 0, 0);
 	LCD_DisableCursor(&lcd);
 	LCD_SendString(&lcd, "Note:");
+	LCD_SetCursor(&lcd, 1, 0);
+	LCD_SendString(&lcd, "Enc:");
+
+	encoder_timer_init();
 
   /* USER CODE END 2 */
 
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 	while (1)
 	{
+		handle_encoder();
+
 		switch(state)
 		{
 			case STATE_KEYPAD:
 			{
 				key = keypad_read(&keypad);
 
-				if (key!=0xFF)
+				if (key!=0xFF && key != last_key)
 				{
-//					itoa(key, note_char, 10);
-//					LCD_SetCursor(&lcd, 0, 5);
-//					LCD_SendString(&lcd, note_char);
-//
-//					midi_note_on(midi_channel, key, 127);
-//					HAL_Delay(250);
-//					midi_note_off(midi_channel, key, 127);
-//				}
-					if(key != last_key)
+					itoa(key, note_char, 10);
+					LCD_SetCursor(&lcd, 0, 5);
+					LCD_SendString(&lcd, note_char);
+					if(key < 9)
 					{
-//						LCD_Clear(&lcd);
-//						HAL_Delay(50);
-//						LCD_SetCursor(&lcd, 0, 0);
-//						LCD_SendString(&lcd, "Note:");
-
-						itoa(key, note_char, 10);
-						LCD_SetCursor(&lcd, 0, 5);
-						LCD_SendString(&lcd, note_char);
-						if(key < 9)
-						{
-							LCD_SetCursor(&lcd, 0, 6);
-							LCD_SendString(&lcd, "  ");
-						}
-
-						midi_note_on(midi_channel, key, 127);
-						HAL_Delay(250);
-						midi_note_off(midi_channel, key, 127);
+						LCD_SetCursor(&lcd, 0, 6);
+						LCD_SendString(&lcd, "  ");
 					}
+
+					midi_note_on(midi_channel, key + base_note, 127);
+					HAL_Delay(250);
+					midi_note_off(midi_channel, key + base_note, 127);
 				}
 				last_key = key;
 				break;
@@ -224,11 +193,11 @@ int main(void)
 				break;
 			}
 		}
-		/* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-		/* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
 	}
-	/* USER CODE END 3 */
+  /* USER CODE END 3 */
 }
 
 /**
@@ -325,6 +294,53 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void key_up_handler(const char key)
+{
+
+}
+void key_down_handler(const char key)
+{
+
+}
+
+void encoder_timer_init(void)
+{
+	/* Enable clock */
+	RCC->APB2ENR |= RCC_APB2ENR_AFIOEN | RCC_APB2ENR_IOPBEN;
+	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+	TIM2->ARR = 0xFFFF;
+	TIM2->CCMR1 |= (TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0 );  /* Map chans to timer inputs */
+	TIM2->CCER &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P);         /* Trigger on rising edge */
+	TIM2->SMCR |= TIM_SMCR_SMS_0;                           /* Set encoder mode */
+	TIM2->CR1 |= TIM_CR1_CEN ;                              /* Enable timer */
+}
+
+void handle_encoder(void)
+{
+	encoder_val = TIM2->CNT/2;
+
+	/*
+	 *  Set upper and lower limits for encoder values
+	 *  Values are shifted due to dividing encoder_val by 2
+	 */
+	if(encoder_val == 0xFFFF>>1 && prev_encoder_val == 0)
+	{
+		TIM2->CNT = 0;
+		encoder_val = 0;
+	}
+	else if(encoder_val >= MAX_MIDI_NOTE)
+	{
+		TIM2->CNT = MAX_MIDI_NOTE << 1;
+		encoder_val = MAX_MIDI_NOTE;
+	}
+	itoa(encoder_val, enc_cnt, 10);
+	LCD_SetCursor(&lcd, 1, 4);
+	LCD_SendString(&lcd, enc_cnt);
+	LCD_SendString(&lcd, "  ");
+	prev_encoder_val = encoder_val;
+}
 
 /* USER CODE END 4 */
 
