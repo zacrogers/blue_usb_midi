@@ -10,32 +10,40 @@
 
 #include "stm32f1xx_hal.h"
 #include <stdint.h>
+#include <stdbool.h>
 
 #define N_ROWS 4
 #define N_COLS 4
 
+typedef (*key_handler) (const char key);
+
 typedef struct
 {
-	/* Use these if pins are over different ports */
-	GPIO_TypeDef* row0_port, row1_port, row2_port, row3_port;
-	GPIO_TypeDef* col0_port, col1_port, col2_port, col3_port;
-
-	/* Use use these if rows / cols are on same port */
 	GPIO_TypeDef* rows_port;
 	GPIO_TypeDef* cols_port;
 
-	uint16_t row0_pin, row1_pin, row2_pin, row3_pin;
-	uint16_t col0_pin, col1_pin, col2_pin, col3_pin;
+	uint16_t      row_pins[N_ROWS];
+	uint16_t      col_pins[N_COLS];
 
-	uint16_t row_pins[N_ROWS];
-	uint16_t col_pins[N_COLS];
+	uint8_t       key_map[N_ROWS][N_COLS];
 
-	uint8_t keys_up[4][4];
-	uint8_t key_map[N_ROWS][N_COLS];
+	uint8_t       keys_up[4][4];
+	bool          keys_state[4][4];
+	bool          keys_prev_state[4][4];
+
+	key_handler   key_up_handler;
+	key_handler   key_down_handler;
 }Keypad;
 
 void keypad_init(Keypad *kp);
 void keypad_init_keymap(Keypad *kp, uint8_t **map);
+
+/* Use this when just returning the pressed key*/
 char keypad_read(Keypad *kp);
+
+/* Use this when using handler functions */
+void keypad_scan(Keypad *kp);
+void keypad_set_key_up_handler(Keypad *kp, key_handler handler);
+void keypad_set_key_down_handler(Keypad *kp, key_handler handler);
 
 #endif /* INC_KEYPAD_H_ */

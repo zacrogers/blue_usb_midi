@@ -37,7 +37,11 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
+typedef enum
+{
+	STATE_KEYPAD,
+	STATE_SEQUENCER
+}State;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -54,7 +58,8 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+void state_keypad();
+void state_sequencer();
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
