@@ -161,35 +161,12 @@ int main(void)
 		{
 			case STATE_KEYPAD:
 			{
-				key = keypad_read(&keypad);
-
-				if (key!=0xFF && key != last_key)
-				{
-					itoa(key, note_char, 10);
-					LCD_SetCursor(&lcd, 0, 5);
-					LCD_SendString(&lcd, note_char);
-					if(key < 9)
-					{
-						LCD_SetCursor(&lcd, 0, 6);
-						LCD_SendString(&lcd, "  ");
-					}
-
-					midi_note_on(midi_channel, key + base_note, 127);
-					HAL_Delay(250);
-					midi_note_off(midi_channel, key + base_note, 127);
-				}
-				last_key = key;
+				state_keypad();
 				break;
 			}
 			case STATE_SEQUENCER:
 			{
-				for(int i = 0; i < 8; ++i)
-				{
-					midi_note_on(midi_channel, sequence[i], 127);
-					HAL_Delay(1000);
-					midi_note_off(midi_channel, sequence[i], 127);
-					HAL_Delay(1000);
-				}
+				state_sequencer();
 				break;
 			}
 		}
@@ -294,6 +271,40 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void state_keypad(void)
+{
+	key = keypad_read(&keypad);
+
+	if (key!=0xFF && key != last_key)
+	{
+		itoa(key, note_char, 10);
+		LCD_SetCursor(&lcd, 0, 5);
+		LCD_SendString(&lcd, note_char);
+
+		if(key < 9)
+		{
+			LCD_SetCursor(&lcd, 0, 6);
+			LCD_SendString(&lcd, "  ");
+		}
+
+		midi_note_on(midi_channel, key + base_note, 127);
+		HAL_Delay(250);
+		midi_note_off(midi_channel, key + base_note, 127);
+	}
+	last_key = key;
+}
+
+void state_sequencer(void)
+{
+	for(int i = 0; i < 8; ++i)
+	{
+		midi_note_on(midi_channel, sequence[i], 127);
+		HAL_Delay(1000);
+		midi_note_off(midi_channel, sequence[i], 127);
+		HAL_Delay(1000);
+	}
+}
 
 void key_up_handler(const char key)
 {

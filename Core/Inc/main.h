@@ -58,13 +58,13 @@ typedef enum
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-void state_keypad();
-void state_sequencer();
+void state_keypad(void);
+void state_sequencer(void);
 
 void key_up_handler(const char key);
 void key_down_handler(const char key);
 
-void encoder_timer_init();
+void encoder_timer_init(void);
 void handle_encoder(void);
 /* USER CODE END EFP */
 
