@@ -33,6 +33,7 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "keypad.h"
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -58,6 +59,9 @@ typedef enum
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+void gpio_init(void);
+
+void state_change(void);
 void state_keypad(void);
 void state_sequencer(void);
 
@@ -65,11 +69,18 @@ void key_up_handler(const char key);
 void key_down_handler(const char key);
 
 void encoder_timer_init(void);
+void encoder_button_it_init(void);
 void handle_encoder(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
 /* USER CODE BEGIN Private defines */
+#define OB_LED_PORT GPIOC
+#define OB_LED_PIN GPIO_PIN_13
+
+#define ENC_BTN_PORT GPIOC
+#define ENC_BTN_PIN GPIO_PIN_14
+
 #define MAX_MIDI_NOTE 127
 /* USER CODE END Private defines */
 

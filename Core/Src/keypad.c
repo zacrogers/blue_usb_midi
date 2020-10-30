@@ -139,4 +139,13 @@ void keypad_scan(Keypad *kp)
 	}
 }
 
+void keypad_set_key_up_handler(Keypad *kp, key_handler handler)
+{
+
+}
+void keypad_set_key_down_handler(Keypad *kp, key_handler handler)
+{
+
+}
+
 

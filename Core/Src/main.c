@@ -82,7 +82,8 @@ I2C_LCD lcd = {.address = (0x27 << 1),
 			   .mode    = LCD_MODE_4BIT,
 			   .i2c_bus = &hi2c1};
 
-State   state = STATE_KEYPAD;
+State   state       = STATE_KEYPAD;
+State   prev_state  = STATE_SEQUENCER;
 
 int     sequence[8]  = {69, 71, 72, 74, 76, 77, 79, 80};
 uint8_t midi_channel = 0;
@@ -94,7 +95,9 @@ int     encoder_val  = 0;
 int     prev_encoder_val  = 0;
 char    enc_cnt[6];
 
+int toggle = 1;
 
+volatile bool enc_btn_isr_flag = false;
 /* USER CODE END 0 */
 
 /**
@@ -127,9 +130,12 @@ int main(void)
 	//  MX_USB_DEVICE_Init();
 	MX_I2C1_Init();
 	/* USER CODE BEGIN 2 */
+	gpio_init(); //  remember to comment out MX_USB_DEVICE_Init(); if MX regenerates
 
   	/* Init keypad */
 	keypad_init(&keypad);
+//	keypad_set_key_up_handler(&keypad, key_up_handler);
+//	keypad_set_key_down_handler(&keypad, key_down_handler);
 
 	/* Init usb midi device */
 	USBD_Init(&hUsbDeviceFS, &FS_Desc, DEVICE_FS);
@@ -148,6 +154,7 @@ int main(void)
 	LCD_SendString(&lcd, "Enc:");
 
 	encoder_timer_init();
+	encoder_button_it_init();
 
   /* USER CODE END 2 */
 
@@ -155,6 +162,28 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
+		/* Handle encoder push button */
+		if(enc_btn_isr_flag)
+		{
+			if(toggle)
+			{
+//				state = STATE_SEQUENCER;
+				LCD_SetCursor(&lcd, 0, 8);
+				LCD_SendString(&lcd, "SEQ");
+				HAL_GPIO_WritePin(OB_LED_PORT, OB_LED_PIN, 1);
+				toggle = 0;
+			}
+			else
+			{
+//				state = STATE_KEYPAD;
+				LCD_SetCursor(&lcd, 0, 8);
+				LCD_SendString(&lcd, "KEY");
+				HAL_GPIO_WritePin(OB_LED_PORT, OB_LED_PIN, 0);
+				toggle = 1;
+			}
+			enc_btn_isr_flag = false;
+		}
+
 		handle_encoder();
 
 		switch(state)
@@ -272,25 +301,66 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void gpio_init(void)
+{
+	RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
+
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+//	GPIO_InitStruct.Pin = ENC_BTN_PIN;
+//	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+//	GPIO_InitStruct.Pull = GPIO_NOPULL;
+//	HAL_GPIO_Init(ENC_BTN_PORT, &GPIO_InitStruct);
+
+	GPIO_InitStruct.Pin = OB_LED_PIN;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(OB_LED_PORT, &GPIO_InitStruct);
+}
+
+void state_change(void)
+{
+	switch(state)
+	{
+		case STATE_KEYPAD:
+		{
+			state = STATE_SEQUENCER;
+			LCD_SetCursor(&lcd, 0, 8);
+			LCD_SendString(&lcd, "SEQ");
+			break;
+		}
+		case STATE_SEQUENCER:
+		{
+			state = STATE_KEYPAD;
+			LCD_SetCursor(&lcd, 0, 8);
+			LCD_SendString(&lcd, "KEY");
+			break;
+		}
+	}
+}
+
 void state_keypad(void)
 {
 	key = keypad_read(&keypad);
 
 	if (key!=0xFF && key != last_key)
 	{
-		itoa(key, note_char, 10);
+		int note_val = key + ((encoder_val < 127) ? 127 : encoder_val); // limit upper note to 127
+
+		itoa(note_val, note_char, 10);
 		LCD_SetCursor(&lcd, 0, 5);
 		LCD_SendString(&lcd, note_char);
 
-		if(key < 9)
+		if(note_val < 9)
 		{
 			LCD_SetCursor(&lcd, 0, 6);
 			LCD_SendString(&lcd, "  ");
 		}
 
-		midi_note_on(midi_channel, key + base_note, 127);
+		midi_note_on(midi_channel, note_val, 127);
 		HAL_Delay(250);
-		midi_note_off(midi_channel, key + base_note, 127);
+		midi_note_off(midi_channel, note_val, 127);
 	}
 	last_key = key;
 }
@@ -328,8 +398,39 @@ void encoder_timer_init(void)
 	TIM2->CR1 |= TIM_CR1_CEN ;                              /* Enable timer */
 }
 
+/* For handling encoder button */
+void EXTI15_10_IRQHandler(void)
+{
+	if(EXTI->PR & EXTI_PR_PR14)
+	{
+		enc_btn_isr_flag = true;
+		EXTI->PR |= EXTI_PR_PR14;
+	}
+}
+
+void encoder_button_it_init(void)
+{
+	RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
+
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+	GPIO_InitStruct.Pin = ENC_BTN_PIN;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(ENC_BTN_PORT, &GPIO_InitStruct);
+
+	AFIO->EXTICR[3] |= AFIO_EXTICR4_EXTI14_PC;
+
+	EXTI->IMR |= EXTI_IMR_MR14;
+	EXTI->RTSR |= EXTI_RTSR_TR14;
+
+	NVIC_EnableIRQ(EXTI15_10_IRQn);
+	NVIC_SetPriority(EXTI15_10_IRQn, 0);
+}
+
 void handle_encoder(void)
 {
+	/* Encoder increments twice per tick so divide by 2 */
 	encoder_val = TIM2->CNT/2;
 
 	/*
