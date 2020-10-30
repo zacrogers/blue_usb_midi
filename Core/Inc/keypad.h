@@ -27,9 +27,11 @@ typedef struct
 
 	uint8_t       key_map[N_ROWS][N_COLS];
 
-	uint8_t       keys_up[4][4];
 	bool          keys_state[4][4];
 	bool          keys_prev_state[4][4];
+
+	uint16_t      _keys_state;
+	uint16_t      _keys_prev_state;
 
 	key_handler   key_up_handler;
 	key_handler   key_down_handler;

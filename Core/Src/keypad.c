@@ -117,6 +117,8 @@ char keypad_read(Keypad *kp)
 
 void keypad_scan(Keypad *kp)
 {
+	uint8_t index = 0;
+
 	for(uint8_t row = 0; row < N_ROWS; ++row)
 	{
 		/* Set state of row pins */
@@ -132,34 +134,52 @@ void keypad_scan(Keypad *kp)
 			}
 		}
 
-		/* Scan column pins */
+		/* Scan column pins to read for key press */
 		for(uint8_t col = 0; col < N_COLS; ++col)
 		{
 			if(!HAL_GPIO_ReadPin (kp->cols_port, kp->col_pins[col]))
 			{
-//				while (!(HAL_GPIO_ReadPin (kp->cols_port, kp->col_pins[col])));
-//				kp->key_up_handler(kp->key_map[row][col]);
 				kp->keys_state[row][col] = true;
+//				kp->_keys_state |= (0x01 << index);
 			}
 			else
 			{
 				kp->keys_state[row][col] = false;
+//				kp->_keys_state &= ~(0x01 << index);
 			}
 		}
+		index++;
 	}
 
 
-	/* check for keydown */
+	/* Trigger handlers if state has changed */
+//	index = 0;
+//
+//	if(kp->_keys_prev_state != kp->_keys_state)
+//	{
+//		for(uint8_t row = 0; row < N_ROWS; ++row)
+//		{
+//			for(uint8_t col = 0; col < N_COLS; ++col)
+//			{
+//				 if(kp->_keys_state & (0x01 << index))
+//				 {
+//					 kp->key_down_handler(kp->key_map[row][col]);
+//				 }
+//				 else
+//				 {
+//					 kp->key_up_handler(kp->key_map[row][col]);
+//				 }
+//			}
+//		}
+//		index++;
+//	}
+
 	for(uint8_t row = 0; row < N_ROWS; ++row)
 	{
 		for(uint8_t col = 0; col < N_COLS; ++col)
 		{
 			 if(kp->keys_prev_state[row][col] != kp->keys_state[row][col])
 			 {
-//				 if(kp->keys_prev_state[row][col] == true && kp->keys_state[row][col] == false)
-//				 {
-//					 kp->key_down_handler(kp->key_map[row][col]);
-//				 }
 				 if(kp->keys_state[row][col])
 				 {
 					 kp->key_down_handler(kp->key_map[row][col]);
@@ -172,6 +192,8 @@ void keypad_scan(Keypad *kp)
 		}
 	}
 
+//	kp->_keys_prev_state = kp->_keys_state; /* Copy current state to prev state */
+
 	/* Copy current state to prev state */
 	for(uint8_t row = 0; row < N_ROWS; ++row)
 	{
@@ -183,13 +205,11 @@ void keypad_scan(Keypad *kp)
 }
 
 
-
-
-
 void keypad_set_key_up_handler(Keypad *kp, key_handler handler)
 {
 	kp->key_up_handler = handler;
 }
+
 void keypad_set_key_down_handler(Keypad *kp, key_handler handler)
 {
 	kp->key_down_handler = handler;

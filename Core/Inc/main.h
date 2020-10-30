@@ -43,6 +43,18 @@ typedef enum
 	STATE_KEYPAD,
 	STATE_SEQUENCER
 }State;
+
+typedef enum
+{
+	MAIN_STATE_KEYPAD,
+	MAIN_STATE_SEQUENCER
+}MainState;
+
+typedef enum
+{
+	KP_STATE_ROOT,
+	KP_STATE_OCTAVE
+}KeypadState;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -82,6 +94,8 @@ void handle_encoder(void);
 #define ENC_BTN_PIN GPIO_PIN_14
 
 #define MAX_MIDI_NOTE 127
+#define NUM_SEMITONES 12
+#define NUM_BUTTONS   16
 
 #define ENCODER_BTN_ISR EXTI15_10_IRQHandler
 /* USER CODE END Private defines */

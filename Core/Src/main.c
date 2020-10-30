@@ -52,7 +52,7 @@
 I2C_HandleTypeDef hi2c1;
 
 /* USER CODE BEGIN PV */
-
+const char *note_to_string[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -90,12 +90,13 @@ uint8_t midi_channel = 0;
 char    note_char[5] = {0}; /* For displaying note to lcd */
 char    last_key     = 255; /* Store pressed key */
 char    key          = 0;   /* Store key */
-uint8_t base_note    = 69;  /* Base note for midi transmission*/
+uint8_t base_note    = 0;  /* Base note for midi transmission*/
 int     encoder_val  = 0;
 int     prev_encoder_val  = 0;
 char    enc_cnt[6];
 
 int toggle = 1;
+uint8_t curr_octave = 0;
 
 volatile bool enc_btn_isr_flag = false;
 /* USER CODE END 0 */
@@ -307,11 +308,6 @@ void gpio_init(void)
 
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-//	GPIO_InitStruct.Pin = ENC_BTN_PIN;
-//	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-//	GPIO_InitStruct.Pull = GPIO_NOPULL;
-//	HAL_GPIO_Init(ENC_BTN_PORT, &GPIO_InitStruct);
-
 	GPIO_InitStruct.Pin = OB_LED_PIN;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -381,8 +377,31 @@ void key_up_handler(const char key)
 {
 	midi_note_off(midi_channel, key + encoder_val, 127);
 }
+
 void key_down_handler(const char key)
 {
+
+	LCD_SetCursor(&lcd, 0, 5);
+	LCD_SendString(&lcd, "  ");
+	HAL_Delay(100);
+	int note_val = key + ((encoder_val < 127) ? 127 : encoder_val); // limit upper note to 12
+
+	int ind = key % NUM_SEMITONES;
+
+	char note_disp[2];
+	strcpy(note_disp, note_to_string[ind]);
+
+	itoa(note_val, note_char, 10);
+	LCD_SetCursor(&lcd, 0, 5);
+	LCD_SendString(&lcd, note_disp);
+
+//	if(note_val < 9)
+//	if(ind < 9)
+//	{
+//		LCD_SetCursor(&lcd, 0, 6);
+//		LCD_SendString(&lcd, "  ");
+//	}
+
 	midi_note_on(midi_channel, key + encoder_val, 127);
 }
 
@@ -432,7 +451,7 @@ void encoder_button_it_init(void)
 void handle_encoder(void)
 {
 	/* Encoder increments twice per tick so divide by 2 */
-	encoder_val = TIM2->CNT/2;
+	encoder_val = TIM2->CNT/2 * NUM_SEMITONES;
 
 	/*
 	 *  Set upper and lower limits for encoder values
@@ -453,6 +472,7 @@ void handle_encoder(void)
 	LCD_SendString(&lcd, enc_cnt);
 	LCD_SendString(&lcd, "  ");
 	prev_encoder_val = encoder_val;
+
 }
 
 /* USER CODE END 4 */
