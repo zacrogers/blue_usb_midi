@@ -82,6 +82,8 @@ void handle_encoder(void);
 #define ENC_BTN_PIN GPIO_PIN_14
 
 #define MAX_MIDI_NOTE 127
+
+#define ENCODER_BTN_ISR EXTI15_10_IRQHandler
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

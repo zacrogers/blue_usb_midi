@@ -130,12 +130,12 @@ int main(void)
 	//  MX_USB_DEVICE_Init();
 	MX_I2C1_Init();
 	/* USER CODE BEGIN 2 */
-	gpio_init(); //  remember to comment out MX_USB_DEVICE_Init(); if MX regenerates
+	gpio_init(); //  remember to comment out MX_USB_DEVICE_Init(); if MX regenerates it
 
   	/* Init keypad */
 	keypad_init(&keypad);
-//	keypad_set_key_up_handler(&keypad, key_up_handler);
-//	keypad_set_key_down_handler(&keypad, key_down_handler);
+	keypad_set_key_up_handler(&keypad, key_up_handler);
+	keypad_set_key_down_handler(&keypad, key_down_handler);
 
 	/* Init usb midi device */
 	USBD_Init(&hUsbDeviceFS, &FS_Desc, DEVICE_FS);
@@ -168,7 +168,7 @@ int main(void)
 			if(toggle)
 			{
 //				state = STATE_SEQUENCER;
-				LCD_SetCursor(&lcd, 0, 8);
+				LCD_SetCursor(&lcd, 0, 9);
 				LCD_SendString(&lcd, "SEQ");
 				HAL_GPIO_WritePin(OB_LED_PORT, OB_LED_PIN, 1);
 				toggle = 0;
@@ -176,7 +176,7 @@ int main(void)
 			else
 			{
 //				state = STATE_KEYPAD;
-				LCD_SetCursor(&lcd, 0, 8);
+				LCD_SetCursor(&lcd, 0, 9);
 				LCD_SendString(&lcd, "KEY");
 				HAL_GPIO_WritePin(OB_LED_PORT, OB_LED_PIN, 0);
 				toggle = 1;
@@ -342,27 +342,28 @@ void state_change(void)
 
 void state_keypad(void)
 {
-	key = keypad_read(&keypad);
-
-	if (key!=0xFF && key != last_key)
-	{
-		int note_val = key + ((encoder_val < 127) ? 127 : encoder_val); // limit upper note to 127
-
-		itoa(note_val, note_char, 10);
-		LCD_SetCursor(&lcd, 0, 5);
-		LCD_SendString(&lcd, note_char);
-
-		if(note_val < 9)
-		{
-			LCD_SetCursor(&lcd, 0, 6);
-			LCD_SendString(&lcd, "  ");
-		}
-
-		midi_note_on(midi_channel, note_val, 127);
-		HAL_Delay(250);
-		midi_note_off(midi_channel, note_val, 127);
-	}
-	last_key = key;
+	keypad_scan(&keypad);
+//	key = keypad_read(&keypad);
+//
+//	if (key!=0xFF && key != last_key)
+//	{
+//		int note_val = key + ((encoder_val < 127) ? 127 : encoder_val); // limit upper note to 127
+//
+//		itoa(note_val, note_char, 10);
+//		LCD_SetCursor(&lcd, 0, 5);
+//		LCD_SendString(&lcd, note_char);
+//
+//		if(note_val < 9)
+//		{
+//			LCD_SetCursor(&lcd, 0, 6);
+//			LCD_SendString(&lcd, "  ");
+//		}
+//
+//		midi_note_on(midi_channel, note_val, 127);
+//		HAL_Delay(250);
+//		midi_note_off(midi_channel, note_val, 127);
+//	}
+//	last_key = key;
 }
 
 void state_sequencer(void)
@@ -378,16 +379,16 @@ void state_sequencer(void)
 
 void key_up_handler(const char key)
 {
-
+	midi_note_off(midi_channel, key + encoder_val, 127);
 }
 void key_down_handler(const char key)
 {
-
+	midi_note_on(midi_channel, key + encoder_val, 127);
 }
 
 void encoder_timer_init(void)
 {
-	/* Enable clock */
+	/* Enable clocks */
 	RCC->APB2ENR |= RCC_APB2ENR_AFIOEN | RCC_APB2ENR_IOPBEN;
 	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
 
@@ -399,7 +400,7 @@ void encoder_timer_init(void)
 }
 
 /* For handling encoder button */
-void EXTI15_10_IRQHandler(void)
+void ENCODER_BTN_ISR(void)
 {
 	if(EXTI->PR & EXTI_PR_PR14)
 	{

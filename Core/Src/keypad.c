@@ -31,6 +31,11 @@ static void port_clock_enable(GPIO_TypeDef *port)
 	}
 }
 
+//static bool check_key_down()
+//{
+//
+//}
+
 void keypad_init(Keypad *kp)
 {
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -132,20 +137,62 @@ void keypad_scan(Keypad *kp)
 		{
 			if(!HAL_GPIO_ReadPin (kp->cols_port, kp->col_pins[col]))
 			{
-				while (!(HAL_GPIO_ReadPin (kp->cols_port, kp->col_pins[col])));
-//				return kp->key_map[row][col];
+//				while (!(HAL_GPIO_ReadPin (kp->cols_port, kp->col_pins[col])));
+//				kp->key_up_handler(kp->key_map[row][col]);
+				kp->keys_state[row][col] = true;
 			}
+			else
+			{
+				kp->keys_state[row][col] = false;
+			}
+		}
+	}
+
+
+	/* check for keydown */
+	for(uint8_t row = 0; row < N_ROWS; ++row)
+	{
+		for(uint8_t col = 0; col < N_COLS; ++col)
+		{
+			 if(kp->keys_prev_state[row][col] != kp->keys_state[row][col])
+			 {
+//				 if(kp->keys_prev_state[row][col] == true && kp->keys_state[row][col] == false)
+//				 {
+//					 kp->key_down_handler(kp->key_map[row][col]);
+//				 }
+				 if(kp->keys_state[row][col])
+				 {
+					 kp->key_down_handler(kp->key_map[row][col]);
+				 }
+				 else
+				 {
+					 kp->key_up_handler(kp->key_map[row][col]);
+				 }
+			 }
+		}
+	}
+
+	/* Copy current state to prev state */
+	for(uint8_t row = 0; row < N_ROWS; ++row)
+	{
+		for(uint8_t col = 0; col < N_COLS; ++col)
+		{
+			 kp->keys_prev_state[row][col] = kp->keys_state[row][col];
 		}
 	}
 }
 
+
+
+
+
 void keypad_set_key_up_handler(Keypad *kp, key_handler handler)
 {
-
+	kp->key_up_handler = handler;
 }
 void keypad_set_key_down_handler(Keypad *kp, key_handler handler)
 {
-
+	kp->key_down_handler = handler;
 }
 
 
