@@ -32,8 +32,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "keypad.h"
-#include <stdbool.h>
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -93,11 +92,16 @@ void handle_encoder(void);
 #define ENC_BTN_PORT GPIOC
 #define ENC_BTN_PIN GPIO_PIN_14
 
+#define MIN_MIDI_NOTE 0
 #define MAX_MIDI_NOTE 127
+
+#define MIN_VELOCITY 0
+#define MAX_VELOCITY 127
+
 #define NUM_SEMITONES 12
 #define NUM_BUTTONS   16
 
-#define ENCODER_BTN_ISR EXTI15_10_IRQHandler
+#define N_MENU_OPTS 4
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

@@ -24,6 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include "usb_device.h"
@@ -31,6 +32,8 @@
 #include "usbd_MIDI.h"
 #include "usbd_midi_if.h"
 #include "i2c-lcd.h"
+#include "keypad.h"
+#include "shift_register.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -53,6 +56,7 @@ I2C_HandleTypeDef hi2c1;
 
 /* USER CODE BEGIN PV */
 const char *note_to_string[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+const char *menu_labels[N_MENU_OPTS] = {"Mode", "Opt2", "Opt3", "Opt4"};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -82,6 +86,11 @@ I2C_LCD lcd = {.address = (0x27 << 1),
 			   .mode    = LCD_MODE_4BIT,
 			   .i2c_bus = &hi2c1};
 
+ShiftRegister shift_reg = {.port      = GPIOB,
+		                   .data_pin  = GPIO_PIN_0,
+		                   .latch_pin = GPIO_PIN_1,
+		                   .clock_pin = GPIO_PIN_10};
+
 State   state       = STATE_KEYPAD;
 State   prev_state  = STATE_SEQUENCER;
 
@@ -97,8 +106,13 @@ char    enc_cnt[6];
 
 int toggle = 1;
 uint8_t curr_octave = 0;
-
+uint8_t midi_velocity = 0;
 volatile bool enc_btn_isr_flag = false;
+
+uint8_t cursor_pos = 0;
+
+
+uint8_t shift_reg_val = 0;
 /* USER CODE END 0 */
 
 /**
@@ -148,14 +162,22 @@ int main(void)
 
 	/* Init lcd */
 	LCD_Init(&lcd);
-	LCD_SetCursor(&lcd, 0, 0);
+	LCD_SetCursor(&lcd, 0, 1);
 	LCD_DisableCursor(&lcd);
 	LCD_SendString(&lcd, "Note:");
-	LCD_SetCursor(&lcd, 1, 0);
+	LCD_SetCursor(&lcd, 1, 1);
 	LCD_SendString(&lcd, "Enc:");
 
+	LCD_SetCursor(&lcd, 0, 0);
+	LCD_SendString(&lcd, ">");
+
+	/* Init rotary encoder*/
 	encoder_timer_init();
 	encoder_button_it_init();
+
+	/* Init shift register */
+	shift_reg_init(&shift_reg);
+	shift_reg_set(&shift_reg, shift_reg_val);
 
   /* USER CODE END 2 */
 
@@ -166,20 +188,41 @@ int main(void)
 		/* Handle encoder push button */
 		if(enc_btn_isr_flag)
 		{
+			/* Temporary, to check all register outputs */
+			if(shift_reg_val < 8)
+			{
+				shift_reg_set(&shift_reg, shift_reg_val);
+				shift_reg_val++;
+			}
+			else
+			{
+				shift_reg_clear(&shift_reg);
+				shift_reg_val = 0;
+			}
+
+
 			if(toggle)
 			{
+				LCD_SetCursor(&lcd, 1, 0);
+				LCD_SendString(&lcd, " ");
+				LCD_SetCursor(&lcd, 0, 0);
+				LCD_SendString(&lcd, ">");
 //				state = STATE_SEQUENCER;
-				LCD_SetCursor(&lcd, 0, 9);
-				LCD_SendString(&lcd, "SEQ");
-				HAL_GPIO_WritePin(OB_LED_PORT, OB_LED_PIN, 1);
+//				LCD_SetCursor(&lcd, 0, 9);
+//				LCD_SendString(&lcd, "SEQ");
+//				HAL_GPIO_WritePin(OB_LED_PORT, OB_LED_PIN, 1);
 				toggle = 0;
 			}
 			else
 			{
+				LCD_SetCursor(&lcd, 0, 0);
+				LCD_SendString(&lcd, " ");
+				LCD_SetCursor(&lcd, 1, 0);
+				LCD_SendString(&lcd, ">");
 //				state = STATE_KEYPAD;
-				LCD_SetCursor(&lcd, 0, 9);
-				LCD_SendString(&lcd, "KEY");
-				HAL_GPIO_WritePin(OB_LED_PORT, OB_LED_PIN, 0);
+//				LCD_SetCursor(&lcd, 0, 9);
+//				LCD_SendString(&lcd, "KEY");
+//				HAL_GPIO_WritePin(OB_LED_PORT, OB_LED_PIN, 0);
 				toggle = 1;
 			}
 			enc_btn_isr_flag = false;
@@ -339,27 +382,6 @@ void state_change(void)
 void state_keypad(void)
 {
 	keypad_scan(&keypad);
-//	key = keypad_read(&keypad);
-//
-//	if (key!=0xFF && key != last_key)
-//	{
-//		int note_val = key + ((encoder_val < 127) ? 127 : encoder_val); // limit upper note to 127
-//
-//		itoa(note_val, note_char, 10);
-//		LCD_SetCursor(&lcd, 0, 5);
-//		LCD_SendString(&lcd, note_char);
-//
-//		if(note_val < 9)
-//		{
-//			LCD_SetCursor(&lcd, 0, 6);
-//			LCD_SendString(&lcd, "  ");
-//		}
-//
-//		midi_note_on(midi_channel, note_val, 127);
-//		HAL_Delay(250);
-//		midi_note_off(midi_channel, note_val, 127);
-//	}
-//	last_key = key;
 }
 
 void state_sequencer(void)
@@ -380,12 +402,11 @@ void key_up_handler(const char key)
 
 void key_down_handler(const char key)
 {
-
 	LCD_SetCursor(&lcd, 0, 5);
 	LCD_SendString(&lcd, "  ");
 	HAL_Delay(100);
-	int note_val = key + ((encoder_val < 127) ? 127 : encoder_val); // limit upper note to 12
 
+	int note_val = key + ((encoder_val < 127) ? 127 : encoder_val); // limit upper note to 12
 	int ind = key % NUM_SEMITONES;
 
 	char note_disp[2];
@@ -419,7 +440,7 @@ void encoder_timer_init(void)
 }
 
 /* For handling encoder button */
-void ENCODER_BTN_ISR(void)
+void EXTI15_10_IRQHandler(void)
 {
 	if(EXTI->PR & EXTI_PR_PR14)
 	{
@@ -467,12 +488,12 @@ void handle_encoder(void)
 		TIM2->CNT = MAX_MIDI_NOTE << 1;
 		encoder_val = MAX_MIDI_NOTE;
 	}
+
 	itoa(encoder_val, enc_cnt, 10);
 	LCD_SetCursor(&lcd, 1, 4);
 	LCD_SendString(&lcd, enc_cnt);
 	LCD_SendString(&lcd, "  ");
 	prev_encoder_val = encoder_val;
-
 }
 
 /* USER CODE END 4 */
