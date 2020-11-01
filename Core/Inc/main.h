@@ -32,7 +32,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -42,6 +42,27 @@ typedef enum
 	STATE_KEYPAD,
 	STATE_SEQUENCER
 }State;
+
+typedef enum
+{
+	MODE_KEYPAD,
+	MODE_SEQUENCER
+}Mode;
+
+typedef struct
+{
+	uint8_t note;
+	uint8_t velocity;
+	uint8_t octave;
+}KbVars;
+
+typedef struct
+{
+	uint8_t bpm;
+	bool playing;
+	uint8_t note;
+	uint8_t step;
+}SequencerVars;
 
 typedef enum
 {
@@ -76,12 +97,15 @@ void state_change(void);
 void state_keypad(void);
 void state_sequencer(void);
 
+/* Handler function for keypad state changes */
 void key_up_handler(const char key);
 void key_down_handler(const char key);
 
 void encoder_timer_init(void);
 void encoder_button_it_init(void);
 void handle_encoder(void);
+
+void update_menu(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
@@ -92,6 +116,8 @@ void handle_encoder(void);
 #define ENC_BTN_PORT GPIOC
 #define ENC_BTN_PIN GPIO_PIN_14
 
+#define MAX_MIDI_OCTAVES 10
+
 #define MIN_MIDI_NOTE 0
 #define MAX_MIDI_NOTE 127
 
@@ -99,9 +125,15 @@ void handle_encoder(void);
 #define MAX_VELOCITY 127
 
 #define NUM_SEMITONES 12
+#define NUM_SEMITONES 12
 #define NUM_BUTTONS   16
 
 #define N_MENU_OPTS 4
+/* Defines for menu options */
+#define N_MODES   2
+#define N_KB_OPTS 2
+#define N_SEQ_OPTS 3
+#define N_SEQ_STEPS 8
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

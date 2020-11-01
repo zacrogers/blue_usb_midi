@@ -57,6 +57,13 @@ I2C_HandleTypeDef hi2c1;
 /* USER CODE BEGIN PV */
 const char *note_to_string[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 const char *menu_labels[N_MENU_OPTS] = {"Mode", "Opt2", "Opt3", "Opt4"};
+
+/* Strings for menu labels */
+const char *mode_labels[N_MODES]   = {"Keypad", "Sequencer"};
+const char *kb_labels[N_KB_OPTS]   = {"Octave", "Velocity"};
+const char *seq_labels[N_SEQ_OPTS] = {"Tempo", "Length", "Set Step Note"};
+
+const char *back_label = "Back";
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -94,6 +101,15 @@ ShiftRegister shift_reg = {.port      = GPIOB,
 State   state       = STATE_KEYPAD;
 State   prev_state  = STATE_SEQUENCER;
 
+Mode curr_mode = MODE_KEYPAD;
+
+//KbVars kb_vars = {0};
+//SequencerVars seq_vars = {0};
+uint8_t kb_vars[N_KB_OPTS] = {10, 100};
+uint8_t seq_vars[N_SEQ_OPTS] = {0};
+
+char    value_label[3]; /* for displaying variables in menu */
+
 int     sequence[8]  = {69, 71, 72, 74, 76, 77, 79, 80};
 uint8_t midi_channel = 0;
 char    note_char[5] = {0}; /* For displaying note to lcd */
@@ -110,6 +126,9 @@ uint8_t midi_velocity = 0;
 volatile bool enc_btn_isr_flag = false;
 
 uint8_t cursor_pos = 0;
+
+uint8_t prev_menu_pos = 0;
+uint8_t curr_menu_pos = 0;
 
 
 uint8_t shift_reg_val = 0;
@@ -164,12 +183,12 @@ int main(void)
 	LCD_Init(&lcd);
 	LCD_SetCursor(&lcd, 0, 1);
 	LCD_DisableCursor(&lcd);
-	LCD_SendString(&lcd, "Note:");
-	LCD_SetCursor(&lcd, 1, 1);
-	LCD_SendString(&lcd, "Enc:");
-
-	LCD_SetCursor(&lcd, 0, 0);
-	LCD_SendString(&lcd, ">");
+//	LCD_SendString(&lcd, "Note:");
+//	LCD_SetCursor(&lcd, 1, 1);
+//	LCD_SendString(&lcd, "Enc:");
+//
+//	LCD_SetCursor(&lcd, 0, 0);
+//	LCD_SendString(&lcd, ">");
 
 	/* Init rotary encoder*/
 	encoder_timer_init();
@@ -186,47 +205,47 @@ int main(void)
 	while (1)
 	{
 		/* Handle encoder push button */
-		if(enc_btn_isr_flag)
-		{
-			/* Temporary, to check all register outputs */
-			if(shift_reg_val < 8)
-			{
-				shift_reg_set(&shift_reg, shift_reg_val);
-				shift_reg_val++;
-			}
-			else
-			{
-				shift_reg_clear(&shift_reg);
-				shift_reg_val = 0;
-			}
-
-
-			if(toggle)
-			{
-				LCD_SetCursor(&lcd, 1, 0);
-				LCD_SendString(&lcd, " ");
-				LCD_SetCursor(&lcd, 0, 0);
-				LCD_SendString(&lcd, ">");
-//				state = STATE_SEQUENCER;
-//				LCD_SetCursor(&lcd, 0, 9);
-//				LCD_SendString(&lcd, "SEQ");
-//				HAL_GPIO_WritePin(OB_LED_PORT, OB_LED_PIN, 1);
-				toggle = 0;
-			}
-			else
-			{
-				LCD_SetCursor(&lcd, 0, 0);
-				LCD_SendString(&lcd, " ");
-				LCD_SetCursor(&lcd, 1, 0);
-				LCD_SendString(&lcd, ">");
-//				state = STATE_KEYPAD;
-//				LCD_SetCursor(&lcd, 0, 9);
-//				LCD_SendString(&lcd, "KEY");
-//				HAL_GPIO_WritePin(OB_LED_PORT, OB_LED_PIN, 0);
-				toggle = 1;
-			}
-			enc_btn_isr_flag = false;
-		}
+//		if(enc_btn_isr_flag)
+//		{
+//			/* Temporary, to check all register outputs */
+//			if(shift_reg_val < 8)
+//			{
+//				shift_reg_set(&shift_reg, shift_reg_val);
+//				shift_reg_val++;
+//			}
+//			else
+//			{
+//				shift_reg_clear(&shift_reg);
+//				shift_reg_val = 0;
+//			}
+//
+//
+//			if(toggle)
+//			{
+//				LCD_SetCursor(&lcd, 1, 0);
+//				LCD_SendString(&lcd, " ");
+//				LCD_SetCursor(&lcd, 0, 0);
+//				LCD_SendString(&lcd, ">");
+////				state = STATE_SEQUENCER;
+////				LCD_SetCursor(&lcd, 0, 9);
+////				LCD_SendString(&lcd, "SEQ");
+////				HAL_GPIO_WritePin(OB_LED_PORT, OB_LED_PIN, 1);
+//				toggle = 0;
+//			}
+//			else
+//			{
+//				LCD_SetCursor(&lcd, 0, 0);
+//				LCD_SendString(&lcd, " ");
+//				LCD_SetCursor(&lcd, 1, 0);
+//				LCD_SendString(&lcd, ">");
+////				state = STATE_KEYPAD;
+////				LCD_SetCursor(&lcd, 0, 9);
+////				LCD_SendString(&lcd, "KEY");
+////				HAL_GPIO_WritePin(OB_LED_PORT, OB_LED_PIN, 0);
+//				toggle = 1;
+//			}
+//			enc_btn_isr_flag = false;
+//		}
 
 		handle_encoder();
 
@@ -358,6 +377,45 @@ void gpio_init(void)
 	HAL_GPIO_Init(OB_LED_PORT, &GPIO_InitStruct);
 }
 
+void update_menu(void)
+{
+	switch (curr_mode)
+	{
+		case MODE_KEYPAD:
+		{
+			LCD_SetCursor(&lcd, 0, 0);
+			LCD_SendString(&lcd, mode_labels[MODE_KEYPAD]);
+			LCD_SetCursor(&lcd, 1, 0);
+			LCD_SendString(&lcd, ">");
+
+			/* Clear bottom row */
+			LCD_SetCursor(&lcd, 1, 1);
+			LCD_SendString(&lcd, "               ");
+
+			if(curr_menu_pos <= N_KB_OPTS)
+			{
+				LCD_SetCursor(&lcd, 1, 1);
+				LCD_SendString(&lcd, kb_labels[curr_menu_pos]);
+
+				itoa(kb_vars[curr_menu_pos], value_label, 10);
+				LCD_SetCursor(&lcd, 1, 11);
+				LCD_SendString(&lcd, value_label);
+			}
+			else
+			{
+				LCD_SetCursor(&lcd, 1, 1);
+				LCD_SendString(&lcd, back_label);
+			}
+			break;
+		}
+
+		case MODE_SEQUENCER:
+		{
+			break;
+		}
+	}
+}
+
 void state_change(void)
 {
 	switch(state)
@@ -472,28 +530,61 @@ void encoder_button_it_init(void)
 void handle_encoder(void)
 {
 	/* Encoder increments twice per tick so divide by 2 */
-	encoder_val = TIM2->CNT/2 * NUM_SEMITONES;
+//	encoder_val = TIM2->CNT/2 * NUM_SEMITONES;
+//
+//	/*
+//	 *  Set upper and lower limits for encoder values
+//	 *  Values are shifted due to dividing encoder_val by 2
+//	 */
+////	if(encoder_val == 0xFFFF>>1 && prev_encoder_val == 0)
+//	if(encoder_val >= MAX_MIDI_NOTE && prev_encoder_val == 0)
+//	{
+//		TIM2->CNT = 0;
+//		encoder_val = 0;
+//	}
+//	else if(encoder_val >= MAX_MIDI_NOTE)
+//	{
+//		TIM2->CNT = 0;
+//		encoder_val = 0;
+////		TIM2->CNT = (MAX_MIDI_NOTE << 1) - 12;
+////		encoder_val = MAX_MIDI_NOTE - 12;
+//	}
 
-	/*
-	 *  Set upper and lower limits for encoder values
-	 *  Values are shifted due to dividing encoder_val by 2
-	 */
-	if(encoder_val == 0xFFFF>>1 && prev_encoder_val == 0)
+
+	if (curr_mode == MODE_KEYPAD)
 	{
-		TIM2->CNT = 0;
-		encoder_val = 0;
-	}
-	else if(encoder_val >= MAX_MIDI_NOTE)
-	{
-		TIM2->CNT = MAX_MIDI_NOTE << 1;
-		encoder_val = MAX_MIDI_NOTE;
+		curr_menu_pos = TIM2->CNT/2;
+
+		if(prev_menu_pos != curr_menu_pos)
+		{
+			update_menu();
+		}
+
+
+
+		if(curr_menu_pos >= 3 && prev_menu_pos == 0)
+		{
+			TIM2->CNT = 0;
+			curr_menu_pos = 0;
+		}
+		else if(curr_menu_pos >= 3)
+		{
+			TIM2->CNT = 0;
+			curr_menu_pos = 0;
+		}
+
+
+		prev_menu_pos = curr_menu_pos;
 	}
 
-	itoa(encoder_val, enc_cnt, 10);
-	LCD_SetCursor(&lcd, 1, 4);
-	LCD_SendString(&lcd, enc_cnt);
-	LCD_SendString(&lcd, "  ");
-	prev_encoder_val = encoder_val;
+
+
+//	update_menu();
+//	itoa(encoder_val, enc_cnt, 10);
+//	LCD_SetCursor(&lcd, 1, 4);
+//	LCD_SendString(&lcd, enc_cnt);
+//	LCD_SendString(&lcd, "  ");
+//	prev_encoder_val = encoder_val;
 }
 
 /* USER CODE END 4 */
