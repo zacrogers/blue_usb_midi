@@ -6,17 +6,17 @@ Possible future feature is to add display screen for each mode, which is toggled
 * Keypad mode will show last note pressed, current octave, and velocity
 
 		Keypad mode main screen
-			|----------------|
-			|Note:A#  Vel:127|
-			|Oct:10          |
-			|----------------|
+		|----------------|
+		|Note:A#  Vel:127|
+		|Oct:10          |
+		|----------------|
 * Sequencer mode will show last note, bpm, play state, and step index
 
 		Sequencer mode main screen
-			|----------------|
-			|BPM:150  PLAY   |
-			|Note:G#  Step:4 |
-			|----------------|
+		|----------------|
+		|BPM:150  PLAY   |
+		|Note:G#  Step:4 |
+		|----------------|
 
 ### Keypad
 * Change base octave of keyboard
