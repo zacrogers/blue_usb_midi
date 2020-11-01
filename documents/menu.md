@@ -1,6 +1,6 @@
 # Menu 
 ## Main Modes
-Modes are currently selected between by using toggle switch
+Modes are currently selected between by using a toggle switch
 
 Possible future feature is to add display screen for each mode, which is toggled on / off with encoder button long press
 * Keypad mode will show last note pressed, current octave, and velocity
@@ -34,12 +34,12 @@ Possible future feature is to add display screen for each mode, which is toggled
 
 ### Sequencer
 * Set tempo
-	* Valid between XX and XXX
+	* Valid between 50 and 200 BPM
 * Set note length
 	* Set length as percentage of quarter note tempo
 * Set step note 
 	*  Valid notes between 0 and 127
-* Start / stop sequence playback
+* Start / stop sequencer playback
 	* Will be done with short press of encoder button when on the sequencer mode main screen
 
 			Sequencer options menu screen
