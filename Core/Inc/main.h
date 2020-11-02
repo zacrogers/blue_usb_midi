@@ -66,7 +66,8 @@ typedef enum
 	ENC_KB_VAR_VELOCITY,
 	ENC_SQ_OPTIONS,
 	ENC_SQ_VAR_TEMPO,
-	ENC_SQ_VAR_LENGTH
+	ENC_SQ_VAR_LENGTH,
+	ENC_VAR_NOTHING
 }EncoderVar;
 
 /* The variable for the keyboard and sequencer modes are both stored in arrays.
@@ -130,15 +131,21 @@ void handle_encoder_btn(void);
 
 /* Redraw the menu */
 void update_menu(void);
+
+long map(long x, long in_min, long in_max, long out_min, long out_max);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
 /* USER CODE BEGIN Private defines */
+/* Pin defines*/
 #define OB_LED_PORT      GPIOC
 #define OB_LED_PIN       GPIO_PIN_13
 
 #define ENC_BTN_PORT     GPIOC
 #define ENC_BTN_PIN      GPIO_PIN_14
+
+#define MODE_SEL_SW_PORT GPIOB
+#define MODE_SEL_SW_PIN  GPIO_PIN_11
 
 #define MAX_MIDI_OCTAVES 10
 #define MAX_MIDI_NOTE    127

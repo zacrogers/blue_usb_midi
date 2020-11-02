@@ -289,14 +289,22 @@ static void MX_GPIO_Init(void)
 void gpio_init(void)
 {
 	RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
+	RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
 
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
 
+	/* Init onboard led pin */
 	GPIO_InitStruct.Pin = OB_LED_PIN;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 	HAL_GPIO_Init(OB_LED_PORT, &GPIO_InitStruct);
+
+	/* Init mode select input pin */
+	GPIO_InitStruct.Pin = MODE_SEL_SW_PIN;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(MODE_SEL_SW_PORT, &GPIO_InitStruct);
 }
 
 void init_peripherals(void)
@@ -514,18 +522,30 @@ void handle_encoder_btn(void)
 						if(curr_menu_pos == KB_VAR_OCTAVE)
 						{
 							curr_enc_var = ENC_KB_VAR_OCTAVE;
+							updating_menu_var = true;
 						}
 						else if(curr_menu_pos == KB_VAR_VELOCITY)
 						{
 							curr_enc_var = ENC_KB_VAR_VELOCITY;
+							updating_menu_var = true;
 						}
-						updating_menu_var = true;
+						else if(curr_menu_pos == 2)
+						{
+							screen = SC_MAIN;
+							curr_enc_var = ENC_VAR_NOTHING;
+							updating_menu_var = false;
+						}
 					}
 					else
 					{
 						curr_enc_var = ENC_KB_OPTIONS;
 						updating_menu_var = false;
 					}
+				}
+				else if(screen == SC_MAIN)
+				{
+					curr_enc_var = ENC_KB_OPTIONS;
+					screen = SC_OPTIONS;
 				}
 				break;
 			}
@@ -539,6 +559,10 @@ void handle_encoder_btn(void)
 	}
 }
 
+long map(long x, long in_min, long in_max, long out_min, long out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
 void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val)
 {
 	/* Increments twice per click so div by 2*/
@@ -547,6 +571,7 @@ void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_v
 	if(*prev_val != *curr_val)
 	{
 		update_menu();
+		shift_reg_set(&shift_reg, map(*curr_val, min, max, 0, 7));
 	}
 
 	/* Check bounds and wrap if necessary*/
@@ -595,6 +620,10 @@ void handle_encoder(void)
 		case ENC_SQ_VAR_LENGTH:
 		{
 			update_encoder(0, MAX_VELOCITY, &seq_vars[ENC_SQ_VAR_LENGTH], &prev_seq_vars[ENC_SQ_VAR_LENGTH]);
+			break;
+		}
+		case ENC_VAR_NOTHING:
+		{
 			break;
 		}
 	}
