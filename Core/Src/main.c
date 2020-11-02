@@ -98,42 +98,32 @@ ShiftRegister shift_reg = {.port      = GPIOB,
 		                   .latch_pin = GPIO_PIN_1,
 		                   .clock_pin = GPIO_PIN_10};
 
-Mode curr_mode = MODE_KEYPAD;
-Screen screen = SC_OPTIONS;
-EncoderVar curr_enc_var = ENC_KB_OPTIONS;
-bool updating_menu_var = false;
+/* Variables relevant to the menu system */
+Mode       curr_mode         = MODE_KEYPAD;
+Screen     screen            = SC_OPTIONS;
+EncoderVar curr_enc_var      = ENC_KB_OPTIONS;
+bool       updating_menu_var = false;
+uint8_t    prev_menu_pos     = 0;
+uint8_t    curr_menu_pos     = 0;
+char       note_char[5]      = {0}; /* For displaying note to lcd */
+char       value_label[3]; /* Buffer for displaying variables in menu */
+char       note_disp[2];
 
-uint8_t kb_vars[N_KB_OPTS] = {10, 100};
-uint8_t prev_kb_vars[N_KB_OPTS] = {0, 0};
-
-uint8_t seq_vars[N_SEQ_OPTS] = {0};
-uint8_t prev_seq_vars[N_SEQ_OPTS] = {0};
-
-char    value_label[3]; /* Buffer for displaying variables in menu */
-
-int     sequence[8]  = {69, 71, 72, 74, 76, 77, 79, 80};
-uint8_t midi_channel = 0;
-char    note_char[5] = {0}; /* For displaying note to lcd */
-char    last_key     = 255; /* Store pressed key */
-char    key          = 0;   /* Store key */
-uint8_t base_note    = 0;  /* Base note for midi transmission*/
-uint8_t last_note_pressed = 0;
-int     encoder_val  = 0;
-int     prev_encoder_val  = 0;
-char    enc_cnt[6];
-
-int toggle = 1;
-uint8_t curr_octave = 0;
-uint8_t midi_velocity = 100;
 volatile bool enc_btn_isr_flag = false;
 
-uint8_t cursor_pos = 0;
+/* Variables relevant to midi data */
+uint8_t    midi_channel              = 0;
+uint8_t    last_note_pressed         = 0;
 
-uint8_t prev_menu_pos = 0;
-uint8_t curr_menu_pos = 0;
+uint8_t    kb_vars[N_KB_OPTS]        = {10, 100};
+uint8_t    prev_kb_vars[N_KB_OPTS]   = {0, 0};
+
+uint8_t    seq_vars[N_SEQ_OPTS]      = {0};
+uint8_t    prev_seq_vars[N_SEQ_OPTS] = {0};
+
+uint8_t    sequence[8]  = {69, 71, 72, 74, 76, 77, 79, 80};
 
 
-uint8_t shift_reg_val = 0;
 /* USER CODE END 0 */
 
 /**
@@ -168,34 +158,9 @@ int main(void)
 	/* USER CODE BEGIN 2 */
 	gpio_init(); //  remember to comment out MX_USB_DEVICE_Init(); if MX regenerates it
 
-  	/* Init keypad */
-	keypad_init(&keypad);
-	keypad_set_key_up_handler(&keypad, key_up_handler);
-	keypad_set_key_down_handler(&keypad, key_down_handler);
+	init_peripherals();
 
-	/* Init usb midi device */
-	USBD_Init(&hUsbDeviceFS, &FS_Desc, DEVICE_FS);
-	USBD_RegisterClass(&hUsbDeviceFS, &USBD_MIDI);
-	USBD_MIDI_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS);
-	USBD_Start(&hUsbDeviceFS);
 
-	HAL_Delay(1000);/* Wait for usb to initialize */
-
-	/* Init lcd */
-	LCD_Init(&lcd);
-	LCD_SetCursor(&lcd, 0, 1);
-	LCD_DisableCursor(&lcd);
-
-	LCD_SetCursor(&lcd, 0, 0);
-	update_menu();
-
-	/* Init rotary encoder*/
-	encoder_timer_init();
-	encoder_button_it_init();
-
-	/* Init shift register */
-	shift_reg_init(&shift_reg);
-	shift_reg_set(&shift_reg, shift_reg_val);
 
   /* USER CODE END 2 */
 
@@ -334,6 +299,38 @@ void gpio_init(void)
 	HAL_GPIO_Init(OB_LED_PORT, &GPIO_InitStruct);
 }
 
+void init_peripherals(void)
+{
+  	/* Init keypad */
+	keypad_init(&keypad);
+	keypad_set_key_up_handler(&keypad, key_up_handler);
+	keypad_set_key_down_handler(&keypad, key_down_handler);
+
+	/* Init usb midi device */
+	USBD_Init(&hUsbDeviceFS, &FS_Desc, DEVICE_FS);
+	USBD_RegisterClass(&hUsbDeviceFS, &USBD_MIDI);
+	USBD_MIDI_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS);
+	USBD_Start(&hUsbDeviceFS);
+
+	HAL_Delay(1000);/* Wait for usb to initialize */
+
+	/* Init lcd */
+	LCD_Init(&lcd);
+	LCD_SetCursor(&lcd, 0, 1);
+	LCD_DisableCursor(&lcd);
+
+	LCD_SetCursor(&lcd, 0, 0);
+	update_menu();
+
+	/* Init rotary encoder*/
+	encoder_timer_init();
+	encoder_button_it_init();
+
+	/* Init shift register */
+	shift_reg_init(&shift_reg);
+	shift_reg_set(&shift_reg, 0);
+}
+
 void update_menu(void)
 {
 	switch (curr_mode)
@@ -345,17 +342,17 @@ void update_menu(void)
 				LCD_SetCursor(&lcd, 0, 0);
 				LCD_SendString(&lcd, "Note:");
 				LCD_SetCursor(&lcd, 0, 5);
-				LCD_SendString(&lcd, (char *)note_to_string[key]);
+				LCD_SendString(&lcd, (char *)note_disp);
 
 				LCD_SetCursor(&lcd, 0, 8);
 				LCD_SendString(&lcd, "Vel:");
-				itoa(midi_velocity, value_label, 10);
+				itoa(kb_vars[KB_VAR_VELOCITY], value_label, 10);
 				LCD_SetCursor(&lcd, 0, 12);
 				LCD_SendString(&lcd, value_label);
 
 				LCD_SetCursor(&lcd, 1, 0);
 				LCD_SendString(&lcd, "Oct:");
-				itoa(curr_octave, value_label, 10);
+				itoa(kb_vars[KB_VAR_OCTAVE], value_label, 10);
 				LCD_SetCursor(&lcd, 1, 4);
 				LCD_SendString(&lcd, value_label);
 			}
@@ -444,10 +441,9 @@ void key_down_handler(const char key)
 	HAL_Delay(100);
 
 	int base_note = kb_vars[KB_VAR_OCTAVE] * NUM_SEMITONES;
-	int note_val = key + ((base_note < 127) ? 127 : base_note); // limit upper note to 12
-	int ind = key % NUM_SEMITONES;
+	int note_val  = key + ((base_note < 127) ? 127 : base_note); // limit upper note to 12
+	int ind       = key % NUM_SEMITONES;
 
-	char note_disp[2];
 	strcpy(note_disp, note_to_string[ind]);
 
 	itoa(note_val, note_char, 10);
@@ -545,6 +541,7 @@ void handle_encoder_btn(void)
 
 void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val)
 {
+	/* Increments twice per click so div by 2*/
 	*curr_val = TIM2->CNT/2;
 
 	if(*prev_val != *curr_val)
@@ -552,6 +549,7 @@ void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_v
 		update_menu();
 	}
 
+	/* Check bounds and wrap if necessary*/
 	if(*curr_val >= max && *prev_val == min)
 	{
 		TIM2->CNT = min;
@@ -591,10 +589,12 @@ void handle_encoder(void)
 		}
 		case ENC_SQ_VAR_TEMPO:
 		{
+			update_encoder(MIN_BPM, MAX_BPM, &seq_vars[ENC_SQ_VAR_TEMPO], &prev_seq_vars[ENC_SQ_VAR_TEMPO]);
 			break;
 		}
 		case ENC_SQ_VAR_LENGTH:
 		{
+			update_encoder(0, MAX_VELOCITY, &seq_vars[ENC_SQ_VAR_LENGTH], &prev_seq_vars[ENC_SQ_VAR_LENGTH]);
 			break;
 		}
 	}

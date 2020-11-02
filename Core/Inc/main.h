@@ -69,7 +69,7 @@ typedef enum
 	ENC_SQ_VAR_LENGTH
 }EncoderVar;
 
-/* The variable for the keyboard and sequqncer modes are both stored in arrays.
+/* The variable for the keyboard and sequencer modes are both stored in arrays.
  * The two following enums are used for indexing these arrays
  */
 typedef enum
@@ -107,12 +107,13 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 void gpio_init(void);
+void init_peripherals(void);
 
 void state_change(void);
 void state_keypad(void);
 void state_sequencer(void);
 
-/* Handler function for keypad state changes */
+/* Handler functions for keypad state changes */
 void key_up_handler(const char key);
 void key_down_handler(const char key);
 
@@ -146,8 +147,8 @@ void update_menu(void);
 #define NUM_SEMITONES    12
 #define NUM_BUTTONS      16
 
-#define MAX_BPM          50
-#define MIN_BPM          200
+#define MIN_BPM          50
+#define MAX_BPM          200
 
 /* Defines for menu options */
 #define N_MODES     2
