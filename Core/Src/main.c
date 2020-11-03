@@ -61,7 +61,8 @@ const char *note_to_string[NUM_SEMITONES] = {"C", "C#", "D", "D#", "E", "F", "F#
 
 /* Strings for menu labels */
 const char *mode_labels[N_MODES]   = {"Keypad", "Sequencer"};
-const char *kb_labels[N_KB_OPTS]   = {"Octave", "Velocity"};
+//const char *kb_labels[N_KB_OPTS]   = {"Octave", "Velocity"};
+const char *kb_labels[N_KB_OPTS]   = {"Oct", "Vel"};
 const char *seq_labels[N_SEQ_OPTS] = {"Tempo", "Length", "Set Step Note"};
 
 const char *play_labels[N_MODES]   = {"PLAY", "STOP"};
@@ -161,18 +162,6 @@ int main(void)
 	gpio_init(); //  remember to comment out MX_USB_DEVICE_Init(); if MX regenerates it
 
 	init_peripherals();
-
-	  ssd1306_Init();
-	  HAL_Delay(1000);
-	  ssd1306_Fill(White);
-	  ssd1306_UpdateScreen();
-
-	  HAL_Delay(1000);
-
-	  ssd1306_SetCursor(0, 0);
-	  ssd1306_WriteString(mode_labels[curr_mode], Font_11x18, Black);
-
-	  ssd1306_UpdateScreen();
 
   /* USER CODE END 2 */
 
@@ -335,11 +324,18 @@ void init_peripherals(void)
 	HAL_Delay(1000);/* Wait for usb to initialize */
 
 	/* Init lcd */
-	LCD_Init(&lcd);
-	LCD_SetCursor(&lcd, 0, 1);
-	LCD_DisableCursor(&lcd);
+//	LCD_Init(&lcd);
+//	LCD_SetCursor(&lcd, 0, 1);
+//	LCD_DisableCursor(&lcd);
+//
+//	LCD_SetCursor(&lcd, 0, 0);
 
-	LCD_SetCursor(&lcd, 0, 0);
+	ssd1306_Init();
+	HAL_Delay(1000);
+	ssd1306_Fill(Black);
+	ssd1306_UpdateScreen();
+	HAL_Delay(500);
+
 	update_menu();
 
 	/* Init rotary encoder*/
@@ -359,51 +355,53 @@ void update_menu(void)
 		{
 			if(screen == SC_MAIN)
 			{
-				LCD_SetCursor(&lcd, 0, 0);
-				LCD_SendString(&lcd, "Note:");
-				LCD_SetCursor(&lcd, 0, 5);
-				LCD_SendString(&lcd, (char *)note_disp);
-
-				LCD_SetCursor(&lcd, 0, 8);
-				LCD_SendString(&lcd, "Vel:");
-				itoa(kb_vars[KB_VAR_VELOCITY], value_label, 10);
-				LCD_SetCursor(&lcd, 0, 12);
-				LCD_SendString(&lcd, value_label);
-
-				LCD_SetCursor(&lcd, 1, 0);
-				LCD_SendString(&lcd, "Oct:");
-				itoa(kb_vars[KB_VAR_OCTAVE], value_label, 10);
-				LCD_SetCursor(&lcd, 1, 4);
-				LCD_SendString(&lcd, value_label);
+				draw_keypad_main_screen();
+//				LCD_SetCursor(&lcd, 0, 0);
+//				LCD_SendString(&lcd, "Note:");
+//				LCD_SetCursor(&lcd, 0, 5);
+//				LCD_SendString(&lcd, (char *)note_disp);
+//
+//				LCD_SetCursor(&lcd, 0, 8);
+//				LCD_SendString(&lcd, "Vel:");
+//				itoa(kb_vars[KB_VAR_VELOCITY], value_label, 10);
+//				LCD_SetCursor(&lcd, 0, 12);
+//				LCD_SendString(&lcd, value_label);
+//
+//				LCD_SetCursor(&lcd, 1, 0);
+//				LCD_SendString(&lcd, "Oct:");
+//				itoa(kb_vars[KB_VAR_OCTAVE], value_label, 10);
+//				LCD_SetCursor(&lcd, 1, 4);
+//				LCD_SendString(&lcd, value_label);
 			}
 			else if(screen == SC_OPTIONS)
 			{
-				LCD_SetCursor(&lcd, 0, 0);
-				LCD_SendString(&lcd, (char *)mode_labels[MODE_KEYPAD]);
-				LCD_SetCursor(&lcd, 1, 0);
-				if(updating_menu_var)
-					LCD_SendString(&lcd, "*");
-				else
-					LCD_SendString(&lcd, ">");
-
-				/* Clear bottom row */
-				LCD_SetCursor(&lcd, 1, 1);
-				LCD_SendString(&lcd, "               ");
-
-				if(curr_menu_pos < N_KB_OPTS)
-				{
-					LCD_SetCursor(&lcd, 1, 1);
-					LCD_SendString(&lcd, (char *)kb_labels[curr_menu_pos]);
-
-					itoa(kb_vars[curr_menu_pos], value_label, 10);
-					LCD_SetCursor(&lcd, 1, 11);
-					LCD_SendString(&lcd, value_label);
-				}
-				else
-				{
-					LCD_SetCursor(&lcd, 1, 1);
-					LCD_SendString(&lcd, (char *)back_label);
-				}
+				draw_keypad_options_screen();
+//				LCD_SetCursor(&lcd, 0, 0);
+//				LCD_SendString(&lcd, (char *)mode_labels[MODE_KEYPAD]);
+//				LCD_SetCursor(&lcd, 1, 0);
+//				if(updating_menu_var)
+//					LCD_SendString(&lcd, "*");
+//				else
+//					LCD_SendString(&lcd, ">");
+//
+//				/* Clear bottom row */
+//				LCD_SetCursor(&lcd, 1, 1);
+//				LCD_SendString(&lcd, "               ");
+//
+//				if(curr_menu_pos < N_KB_OPTS)
+//				{
+//					LCD_SetCursor(&lcd, 1, 1);
+//					LCD_SendString(&lcd, (char *)kb_labels[curr_menu_pos]);
+//
+//					itoa(kb_vars[curr_menu_pos], value_label, 10);
+//					LCD_SetCursor(&lcd, 1, 11);
+//					LCD_SendString(&lcd, value_label);
+//				}
+//				else
+//				{
+//					LCD_SetCursor(&lcd, 1, 1);
+//					LCD_SendString(&lcd, (char *)back_label);
+//				}
 			}
 			break;
 		}
@@ -432,6 +430,76 @@ void update_menu(void)
 	}
 }
 
+void draw_keypad_main_screen(void)
+{
+	ssd1306_Fill(Black);
+
+	ssd1306_SetCursor(0, OLED_ROW_1);
+	ssd1306_WriteString((char *)note_disp, Font_11x18, White);
+
+	ssd1306_SetCursor(0, OLED_ROW_2);
+	ssd1306_WriteString("Vel:", Font_11x18, White);
+
+	itoa(kb_vars[KB_VAR_VELOCITY], value_label, 10);
+	ssd1306_SetCursor(44, OLED_ROW_2);
+	ssd1306_WriteString(value_label, Font_11x18, White);
+
+	ssd1306_SetCursor(0, OLED_ROW_3);
+	ssd1306_WriteString("Oct:", Font_11x18, White);
+
+	itoa(kb_vars[KB_VAR_OCTAVE], value_label, 10);
+	ssd1306_SetCursor(44, OLED_ROW_3);
+	ssd1306_WriteString(value_label, Font_11x18, White);
+
+	ssd1306_UpdateScreen();
+}
+
+void draw_keypad_options_screen(void)
+{
+
+	ssd1306_Fill(Black); /* Clear screen*/
+
+	/* Draw page title header */
+	for (int i = 0; i < 16; i++)
+	{
+		for (int j = 0; j < 128; j++)
+		{
+			ssd1306_DrawPixel(j, i, White);
+		}
+	}
+
+	ssd1306_SetCursor(0, OLED_ROW_1);
+	ssd1306_WriteString((char *)mode_labels[MODE_KEYPAD], Font_11x18, Black);
+
+	ssd1306_SetCursor(0, OLED_ROW_2);
+
+	/* Change selected index icon if editing value */
+	if(updating_menu_var)
+		ssd1306_WriteString("+", Font_11x18, White);
+	else
+		ssd1306_WriteString("-", Font_11x18, White);
+
+	if(curr_menu_pos < N_KB_OPTS)
+	{
+		ssd1306_SetCursor(11, OLED_ROW_2);
+		ssd1306_WriteString((char *)kb_labels[curr_menu_pos], Font_11x18, White);
+
+		itoa(kb_vars[curr_menu_pos], value_label, 10);
+
+		ssd1306_SetCursor(77, OLED_ROW_2);
+		ssd1306_WriteString((char *)value_label, Font_11x18, White);
+	}
+	else
+	{
+		ssd1306_SetCursor(11, OLED_ROW_2);
+		ssd1306_WriteString((char *)back_label, Font_11x18, White);
+	}
+
+	ssd1306_SetCursor(11, OLED_ROW_3);
+	ssd1306_WriteString("Row 3", Font_11x18, White);
+
+	ssd1306_UpdateScreen();
+}
 
 void state_keypad(void)
 {
@@ -456,8 +524,8 @@ void key_up_handler(const char key)
 
 void key_down_handler(const char key)
 {
-	LCD_SetCursor(&lcd, 0, 5);
-	LCD_SendString(&lcd, "  ");
+//	LCD_SetCursor(&lcd, 0, 5);
+//	LCD_SendString(&lcd, "  ");
 	HAL_Delay(100);
 
 	int base_note = kb_vars[KB_VAR_OCTAVE] * NUM_SEMITONES;
@@ -466,12 +534,13 @@ void key_down_handler(const char key)
 
 	strcpy(note_disp, note_to_string[ind]);
 
-	itoa(note_val, note_char, 10);
-	LCD_SetCursor(&lcd, 0, 5);
-	LCD_SendString(&lcd, note_disp);
+//	itoa(note_val, note_char, 10);
+//	LCD_SetCursor(&lcd, 0, 5);
+//	LCD_SendString(&lcd, note_disp);
 
 	last_note_pressed = key + base_note;
 	midi_note_on(midi_channel, key + base_note, kb_vars[KB_VAR_VELOCITY]);
+	update_menu();
 }
 
 void encoder_timer_init(void)

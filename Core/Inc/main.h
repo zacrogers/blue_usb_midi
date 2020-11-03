@@ -131,6 +131,10 @@ void handle_encoder_btn(void);
 
 /* Redraw the menu */
 void update_menu(void);
+void draw_keypad_main_screen(void);
+void draw_keypad_options_screen(void);
+void draw_sequencer_main_screen(void);
+void draw_sequencer_options_screen(void);
 
 long map(long x, long in_min, long in_max, long out_min, long out_max);
 /* USER CODE END EFP */
@@ -156,6 +160,11 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 
 #define MIN_BPM          50
 #define MAX_BPM          200
+
+/* Offset depends on font used*/
+#define OLED_ROW_1       0
+#define OLED_ROW_2       20
+#define OLED_ROW_3       40
 
 /* Defines for menu options */
 #define N_MODES     2
