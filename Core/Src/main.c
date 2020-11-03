@@ -34,6 +34,8 @@
 #include "i2c-lcd.h"
 #include "keypad.h"
 #include "shift_register.h"
+#include "ssd1306.h"
+#include "fonts.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -160,7 +162,17 @@ int main(void)
 
 	init_peripherals();
 
+	  ssd1306_Init();
+	  HAL_Delay(1000);
+	  ssd1306_Fill(White);
+	  ssd1306_UpdateScreen();
 
+	  HAL_Delay(1000);
+
+	  ssd1306_SetCursor(0, 0);
+	  ssd1306_WriteString(mode_labels[curr_mode], Font_11x18, Black);
+
+	  ssd1306_UpdateScreen();
 
   /* USER CODE END 2 */
 
@@ -378,7 +390,7 @@ void update_menu(void)
 				LCD_SetCursor(&lcd, 1, 1);
 				LCD_SendString(&lcd, "               ");
 
-				if(curr_menu_pos <= N_KB_OPTS)
+				if(curr_menu_pos < N_KB_OPTS)
 				{
 					LCD_SetCursor(&lcd, 1, 1);
 					LCD_SendString(&lcd, (char *)kb_labels[curr_menu_pos]);
@@ -565,7 +577,7 @@ long map(long x, long in_min, long in_max, long out_min, long out_max)
 }
 void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val)
 {
-	/* Increments twice per click so div by 2*/
+	/* Increments twice per click so divide by 2*/
 	*curr_val = TIM2->CNT/2;
 
 	if(*prev_val != *curr_val)
@@ -575,15 +587,15 @@ void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_v
 	}
 
 	/* Check bounds and wrap if necessary*/
-	if(*curr_val >= max && *prev_val == min)
+	if(*curr_val > 1 && *prev_val == min)
 	{
 		TIM2->CNT = min;
-		*curr_val = 0;
+		*curr_val = min;
 	}
-	else if(*curr_val >= max)
+	else if(*curr_val > max)
 	{
-		TIM2->CNT = 0;
-		curr_menu_pos = 0;
+		TIM2->CNT = max;
+		curr_menu_pos = max;
 	}
 
 	*prev_val = *curr_val;
@@ -610,6 +622,7 @@ void handle_encoder(void)
 		}
 		case ENC_SQ_OPTIONS:
 		{
+			update_encoder(0, 3, &curr_menu_pos, &prev_menu_pos);
 			break;
 		}
 		case ENC_SQ_VAR_TEMPO:
