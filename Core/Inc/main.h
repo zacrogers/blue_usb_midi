@@ -85,7 +85,6 @@ typedef enum
 {
 	SQ_VAR_BPM,
 	SQ_VAR_LENGTH,
-	SQ_VAR_NOTE,
 	SQ_VAR_PLAYING,
 	SQ_VAR_STEP,
 	SQ_VAR_N
@@ -136,6 +135,8 @@ void draw_keypad_options_screen(void);
 void draw_sequencer_main_screen(void);
 void draw_sequencer_options_screen(void);
 
+void draw_sequencer_step(uint8_t step);
+
 long map(long x, long in_min, long in_max, long out_min, long out_max);
 /* USER CODE END EFP */
 
@@ -166,9 +167,11 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 #define OLED_ROW_2       20
 #define OLED_ROW_3       40
 
+#define SEQ_FR_TOP 44
+
 /* Defines for menu options */
 #define N_MODES     2
-#define N_KB_OPTS   2
+#define N_KB_OPTS   3
 #define N_SEQ_OPTS  3
 #define N_SEQ_STEPS 8
 /* USER CODE END Private defines */

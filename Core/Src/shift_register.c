@@ -82,7 +82,100 @@ void shift_reg_set(ShiftRegister *reg, uint8_t val)
 	{
 		HAL_GPIO_WritePin(reg->port, reg->clock_pin, GPIO_PIN_RESET);
 
+		if(val & (0x01 << bit))
+		{
+			HAL_GPIO_WritePin(reg->port, reg->data_pin, GPIO_PIN_SET);
+		}
+		else
+		{
+			HAL_GPIO_WritePin(reg->port, reg->data_pin, GPIO_PIN_RESET);
+		}
+
+		HAL_GPIO_WritePin(reg->port, reg->clock_pin, GPIO_PIN_SET);
+	}
+	HAL_GPIO_WritePin(reg->port, reg->latch_pin, GPIO_PIN_SET);
+
+#else
+
+	HAL_GPIO_WritePin(reg->latch_port, reg->latch_pin, GPIO_PIN_RESET);
+
+	for(uint8_t bit = 0; bit < N_BITS; ++bit)
+	{
+		HAL_GPIO_WritePin(reg->clock_port, reg->clock_pin, GPIO_PIN_RESET);
+
 		if((0x01 << val) & (0x01 << bit))
+		{
+			HAL_GPIO_WritePin(reg->data_port, reg->data_pin, GPIO_PIN_SET);
+		}
+		else
+		{
+			HAL_GPIO_WritePin(reg->data_port, reg->data_pin, GPIO_PIN_RESET);
+		}
+
+		HAL_GPIO_WritePin(reg->clock_port, reg->clock_pin, GPIO_PIN_SET);
+	}
+	HAL_GPIO_WritePin(reg->latch_port, reg->latch_pin, GPIO_PIN_SET);
+#endif
+}
+
+void shift_reg_set_point(ShiftRegister *reg, uint8_t val)
+{
+#ifdef REGISTER_PINS_SAME_PORT
+	HAL_GPIO_WritePin(reg->port, reg->latch_pin, GPIO_PIN_RESET);
+
+	for(uint8_t bit = 0; bit < N_BITS; ++bit)
+	{
+		HAL_GPIO_WritePin(reg->port, reg->clock_pin, GPIO_PIN_RESET);
+
+		if((0x01 << val) & (0x01 << bit))
+		{
+			HAL_GPIO_WritePin(reg->port, reg->data_pin, GPIO_PIN_SET);
+		}
+		else
+		{
+			HAL_GPIO_WritePin(reg->port, reg->data_pin, GPIO_PIN_RESET);
+		}
+
+		HAL_GPIO_WritePin(reg->port, reg->clock_pin, GPIO_PIN_SET);
+	}
+	HAL_GPIO_WritePin(reg->port, reg->latch_pin, GPIO_PIN_SET);
+
+#else
+
+	HAL_GPIO_WritePin(reg->latch_port, reg->latch_pin, GPIO_PIN_RESET);
+
+	for(uint8_t bit = 0; bit < N_BITS; ++bit)
+	{
+		HAL_GPIO_WritePin(reg->clock_port, reg->clock_pin, GPIO_PIN_RESET);
+
+		if((0x01 << val) & (0x01 << bit))
+		{
+			HAL_GPIO_WritePin(reg->data_port, reg->data_pin, GPIO_PIN_SET);
+		}
+		else
+		{
+			HAL_GPIO_WritePin(reg->data_port, reg->data_pin, GPIO_PIN_RESET);
+		}
+
+		HAL_GPIO_WritePin(reg->clock_port, reg->clock_pin, GPIO_PIN_SET);
+	}
+	HAL_GPIO_WritePin(reg->latch_port, reg->latch_pin, GPIO_PIN_SET);
+#endif
+}
+
+void shift_reg_set_bar(ShiftRegister *reg, uint8_t val)
+{
+	uint8_t reg_output = 0;
+	for(uint8_t i = 0; i < val; ++i){reg_output |= 0x01 << i;}
+
+#ifdef REGISTER_PINS_SAME_PORT
+	HAL_GPIO_WritePin(reg->port, reg->latch_pin, GPIO_PIN_RESET);
+
+	for(uint8_t bit = 0; bit < N_BITS; ++bit)
+	{
+		HAL_GPIO_WritePin(reg->port, reg->clock_pin, GPIO_PIN_RESET);
+
+		if(reg_output & (0x01 << bit))
 		{
 			HAL_GPIO_WritePin(reg->port, reg->data_pin, GPIO_PIN_SET);
 		}

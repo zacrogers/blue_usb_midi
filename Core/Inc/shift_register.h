@@ -31,6 +31,8 @@ typedef struct
 
 void shift_reg_init(ShiftRegister *reg);
 void shift_reg_set(ShiftRegister *reg, uint8_t val);
+void shift_reg_set_point(ShiftRegister *reg, uint8_t val);
+void shift_reg_set_bar(ShiftRegister *reg, uint8_t val);
 void shift_reg_clear(ShiftRegister *reg);
 
 #endif /* INC_SHIFT_REGISTER_H_ */

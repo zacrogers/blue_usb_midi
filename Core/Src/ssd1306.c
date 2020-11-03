@@ -132,6 +132,18 @@ void ssd1306_DrawPixel(uint8_t x, uint8_t y, SSD1306_COLOR color)
 	}
 }
 
+
+void ssd1306_DrawRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height, SSD1306_COLOR color)
+{
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			ssd1306_DrawPixel(x + j, y + i, White);
+		}
+	}
+}
+
 //
 //  Draw 1 char to the screen buffer
 //	ch 		=> char om weg te schrijven

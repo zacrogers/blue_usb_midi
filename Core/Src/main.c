@@ -62,11 +62,13 @@ const char *note_to_string[NUM_SEMITONES] = {"C", "C#", "D", "D#", "E", "F", "F#
 /* Strings for menu labels */
 const char *mode_labels[N_MODES]   = {"Keypad", "Sequencer"};
 //const char *kb_labels[N_KB_OPTS]   = {"Octave", "Velocity"};
-const char *kb_labels[N_KB_OPTS]   = {"Oct", "Vel"};
+const char *kb_labels[N_KB_OPTS]   = {"Oct", "Vel", "Back"};
 const char *seq_labels[N_SEQ_OPTS] = {"Tempo", "Length", "Set Step Note"};
 
 const char *play_labels[N_MODES]   = {"PLAY", "STOP"};
 const char *back_label = "Back";
+
+const uint8_t row_offsets[3] = {OLED_ROW_1, OLED_ROW_2, OLED_ROW_3};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -121,7 +123,7 @@ uint8_t    last_note_pressed         = 0;
 uint8_t    kb_vars[N_KB_OPTS]        = {10, 100};
 uint8_t    prev_kb_vars[N_KB_OPTS]   = {0, 0};
 
-uint8_t    seq_vars[N_SEQ_OPTS]      = {0};
+uint8_t    seq_vars[N_SEQ_OPTS]      = {200, 50, 0};
 uint8_t    prev_seq_vars[N_SEQ_OPTS] = {0};
 
 uint8_t    sequence[8]  = {69, 71, 72, 74, 76, 77, 79, 80};
@@ -321,7 +323,7 @@ void init_peripherals(void)
 	USBD_MIDI_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS);
 	USBD_Start(&hUsbDeviceFS);
 
-	HAL_Delay(1000);/* Wait for usb to initialize */
+	HAL_Delay(2000);/* Wait for usb to initialize */
 
 	/* Init lcd */
 //	LCD_Init(&lcd);
@@ -334,7 +336,7 @@ void init_peripherals(void)
 	HAL_Delay(1000);
 	ssd1306_Fill(Black);
 	ssd1306_UpdateScreen();
-	HAL_Delay(500);
+	HAL_Delay(1000);
 
 	update_menu();
 
@@ -355,7 +357,8 @@ void update_menu(void)
 		{
 			if(screen == SC_MAIN)
 			{
-				draw_keypad_main_screen();
+//				draw_keypad_main_screen();
+				draw_sequencer_main_screen();
 			}
 			else if(screen == SC_OPTIONS)
 			{
@@ -411,6 +414,7 @@ void draw_keypad_main_screen(void)
 
 	ssd1306_UpdateScreen();
 }
+#ifdef NEW_OPTIONS_SCREEN
 
 void draw_keypad_options_screen(void)
 {
@@ -418,6 +422,60 @@ void draw_keypad_options_screen(void)
 	ssd1306_Fill(Black); /* Clear screen*/
 
 	/* Draw page title header */
+//	ssd1306_DrawRect(0, 0, 16, 128, White);
+	for (int i = 0; i < 16; i++)
+	{
+		for (int j = 0; j < 128; j++)
+		{
+			ssd1306_DrawPixel(j, i, White);
+		}
+	}
+
+	ssd1306_SetCursor(0, OLED_ROW_1);
+	ssd1306_WriteString((char *)mode_labels[MODE_KEYPAD], Font_11x18, Black);
+
+	ssd1306_SetCursor(0, OLED_ROW_2);
+
+//	/* Change selected index icon if editing value */
+//	if(updating_menu_var)
+//		ssd1306_WriteString("+", Font_11x18, White);
+//	else
+//		ssd1306_WriteString("-", Font_11x18, White);
+
+	if(curr_menu_pos < N_KB_OPTS)
+	{
+		if(curr_menu_pos < prev_menu_pos)
+		ssd1306_SetCursor(0, row_offsets[curr_menu_pos+1]);
+		ssd1306_WriteString("-", Font_11x18, White);
+		ssd1306_SetCursor(11, OLED_ROW_2);
+		ssd1306_WriteString((char *)kb_labels[curr_menu_pos], Font_11x18, White);
+
+		itoa(kb_vars[curr_menu_pos], value_label, 10);
+
+		ssd1306_SetCursor(77, OLED_ROW_2);
+		ssd1306_WriteString((char *)value_label, Font_11x18, White);
+	}
+//	else if(curr_menu_pos == N_KB_OPTS)
+//	{
+//		ssd1306_SetCursor(11, OLED_ROW_2);
+//		ssd1306_WriteString((char *)back_label, Font_11x18, White);
+//	}
+
+//	ssd1306_SetCursor(0, OLED_ROW_3);
+//	ssd1306_WriteString("---------", Font_11x18, White);
+
+	ssd1306_UpdateScreen();
+}
+
+
+#else
+void draw_keypad_options_screen(void)
+{
+
+	ssd1306_Fill(Black); /* Clear screen*/
+
+	/* Draw page title header */
+//	ssd1306_DrawRect(0, 0, 16, 128, White);
 	for (int i = 0; i < 16; i++)
 	{
 		for (int j = 0; j < 128; j++)
@@ -447,17 +505,94 @@ void draw_keypad_options_screen(void)
 		ssd1306_SetCursor(77, OLED_ROW_2);
 		ssd1306_WriteString((char *)value_label, Font_11x18, White);
 	}
-	else
+	else if(curr_menu_pos == N_KB_OPTS-1)
 	{
 		ssd1306_SetCursor(11, OLED_ROW_2);
-		ssd1306_WriteString((char *)back_label, Font_11x18, White);
+		ssd1306_WriteString((char *)kb_labels[N_KB_OPTS-1], Font_11x18, White);
 	}
 
-	ssd1306_SetCursor(11, OLED_ROW_3);
-	ssd1306_WriteString("Row 3", Font_11x18, White);
+//	ssd1306_SetCursor(0, OLED_ROW_3);
+//	ssd1306_WriteString("---------", Font_11x18, White);
 
 	ssd1306_UpdateScreen();
 }
+#endif
+
+void draw_sequencer_step(uint8_t step)
+{
+	for (int i = 0; i < 16; i++)
+	{
+		for (int j = 0; j < 16; j++)
+		{
+			ssd1306_DrawPixel(j + step*16, i + SEQ_FR_TOP, White);
+		}
+	}
+}
+
+void draw_sequencer_main_screen(void)
+{
+	ssd1306_Fill(Black); /* Clear screen*/
+
+	/* Draw text labels */
+	ssd1306_SetCursor(0, OLED_ROW_1);
+	ssd1306_WriteString("BPM:", Font_11x18, White);
+
+	itoa(seq_vars[SQ_VAR_BPM], value_label, 10);
+	ssd1306_SetCursor(44, OLED_ROW_1);
+	ssd1306_WriteString(value_label, Font_11x18, White);
+
+	ssd1306_SetCursor(0, OLED_ROW_2);
+	ssd1306_WriteString("Len:", Font_11x18, White);
+
+	itoa(seq_vars[SQ_VAR_LENGTH], value_label, 10);
+	ssd1306_SetCursor(44, OLED_ROW_2);
+	ssd1306_WriteString(value_label, Font_11x18, White);
+
+	ssd1306_SetCursor(88, OLED_ROW_1);
+	if(seq_vars[SQ_VAR_PLAYING])
+	{
+		ssd1306_WriteString("PLAY", Font_11x18, White);
+	}
+	else
+	{
+		ssd1306_WriteString("STOP", Font_11x18, White);
+//		for (int i = 0; i < 16; i++)
+//		{
+//			for (int j = 0; j < 16; j++)
+//			{
+//				ssd1306_DrawPixel(j + 77, i, White);
+//			}
+//		}
+	}
+
+	ssd1306_SetCursor(88, OLED_ROW_2);
+	ssd1306_WriteString((char *)note_disp, Font_11x18, White);
+
+	/* Draw sequencer frame */
+
+	/* Draw top horizontal line */
+	for (int i = 0; i < 128; i++){ssd1306_DrawPixel(i, 1 + SEQ_FR_TOP, White);}
+
+	/* Draw bottom horizontal line */
+	for (int i = 16; i < 18; i++)
+	{
+		for (int j = 0; j < 128; j++){ssd1306_DrawPixel(j, i + SEQ_FR_TOP, White);}
+	}
+
+	/* Draw vertical lines */
+	for(int line = 0; line < 17; ++line)
+	{
+		for (int i = 0; i < 16; i++){ssd1306_DrawPixel( line*16, i + SEQ_FR_TOP, White);}
+	}
+
+	/* Draw final vertical line */
+	for (int i = 0; i < 16; i++){ssd1306_DrawPixel(127, i + SEQ_FR_TOP, White);}
+
+	draw_sequencer_step(3);
+
+	ssd1306_UpdateScreen();
+}
+
 
 void state_keypad(void)
 {
@@ -482,19 +617,14 @@ void key_up_handler(const char key)
 
 void key_down_handler(const char key)
 {
-//	LCD_SetCursor(&lcd, 0, 5);
-//	LCD_SendString(&lcd, "  ");
-	HAL_Delay(100);
+	HAL_Delay(100); /* Debounce */
 
 	int base_note = kb_vars[KB_VAR_OCTAVE] * NUM_SEMITONES;
 	int note_val  = key + ((base_note < 127) ? 127 : base_note); // limit upper note to 12
 	int ind       = key % NUM_SEMITONES;
 
+	/* Copy note to string for oled display*/
 	strcpy(note_disp, note_to_string[ind]);
-
-//	itoa(note_val, note_char, 10);
-//	LCD_SetCursor(&lcd, 0, 5);
-//	LCD_SendString(&lcd, note_disp);
 
 	last_note_pressed = key + base_note;
 	midi_note_on(midi_channel, key + base_note, kb_vars[KB_VAR_VELOCITY]);
@@ -602,6 +732,7 @@ long map(long x, long in_min, long in_max, long out_min, long out_max)
 {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
+
 void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val)
 {
 	/* Increments twice per click so divide by 2*/
@@ -610,19 +741,19 @@ void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_v
 	if(*prev_val != *curr_val)
 	{
 		update_menu();
-		shift_reg_set(&shift_reg, map(*curr_val, min, max, 0, 7));
+		shift_reg_set_bar(&shift_reg, map(*curr_val, min, max, 0, 7));
 	}
 
 	/* Check bounds and wrap if necessary*/
-	if(*curr_val > 1 && *prev_val == min)
+	if(*curr_val == 0xff && *prev_val == min)
 	{
-		TIM2->CNT = min;
-		*curr_val = min;
+		TIM2->CNT = 0;
+		*curr_val = 0;
 	}
 	else if(*curr_val > max)
 	{
-		TIM2->CNT = max;
-		curr_menu_pos = max;
+		TIM2->CNT = min;
+		*curr_val = min;
 	}
 
 	*prev_val = *curr_val;
@@ -634,7 +765,7 @@ void handle_encoder(void)
 	{
 		case ENC_KB_OPTIONS:
 		{
-			update_encoder(0, 3, &curr_menu_pos, &prev_menu_pos);
+			update_encoder(0, 2, &curr_menu_pos, &prev_menu_pos);
 			break;
 		}
 		case ENC_KB_VAR_OCTAVE:
