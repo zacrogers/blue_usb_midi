@@ -356,52 +356,10 @@ void update_menu(void)
 			if(screen == SC_MAIN)
 			{
 				draw_keypad_main_screen();
-//				LCD_SetCursor(&lcd, 0, 0);
-//				LCD_SendString(&lcd, "Note:");
-//				LCD_SetCursor(&lcd, 0, 5);
-//				LCD_SendString(&lcd, (char *)note_disp);
-//
-//				LCD_SetCursor(&lcd, 0, 8);
-//				LCD_SendString(&lcd, "Vel:");
-//				itoa(kb_vars[KB_VAR_VELOCITY], value_label, 10);
-//				LCD_SetCursor(&lcd, 0, 12);
-//				LCD_SendString(&lcd, value_label);
-//
-//				LCD_SetCursor(&lcd, 1, 0);
-//				LCD_SendString(&lcd, "Oct:");
-//				itoa(kb_vars[KB_VAR_OCTAVE], value_label, 10);
-//				LCD_SetCursor(&lcd, 1, 4);
-//				LCD_SendString(&lcd, value_label);
 			}
 			else if(screen == SC_OPTIONS)
 			{
 				draw_keypad_options_screen();
-//				LCD_SetCursor(&lcd, 0, 0);
-//				LCD_SendString(&lcd, (char *)mode_labels[MODE_KEYPAD]);
-//				LCD_SetCursor(&lcd, 1, 0);
-//				if(updating_menu_var)
-//					LCD_SendString(&lcd, "*");
-//				else
-//					LCD_SendString(&lcd, ">");
-//
-//				/* Clear bottom row */
-//				LCD_SetCursor(&lcd, 1, 1);
-//				LCD_SendString(&lcd, "               ");
-//
-//				if(curr_menu_pos < N_KB_OPTS)
-//				{
-//					LCD_SetCursor(&lcd, 1, 1);
-//					LCD_SendString(&lcd, (char *)kb_labels[curr_menu_pos]);
-//
-//					itoa(kb_vars[curr_menu_pos], value_label, 10);
-//					LCD_SetCursor(&lcd, 1, 11);
-//					LCD_SendString(&lcd, value_label);
-//				}
-//				else
-//				{
-//					LCD_SetCursor(&lcd, 1, 1);
-//					LCD_SendString(&lcd, (char *)back_label);
-//				}
 			}
 			break;
 		}
