@@ -92,12 +92,6 @@ Keypad  keypad = {.rows_port   = GPIOA,
 				  .col_pins[2] = GPIO_PIN_8,
 				  .col_pins[3] = GPIO_PIN_9}; /* PA0 and PA1 need to be used for encoder */
 
-I2C_LCD lcd = {.address = (0x27 << 1),
-			   .columns = 16,
-			   .lines   = 2,
-			   .mode    = LCD_MODE_4BIT,
-			   .i2c_bus = &hi2c1};
-
 ShiftRegister shift_reg = {.port      = GPIOB,
 		                   .data_pin  = GPIO_PIN_0,
 		                   .latch_pin = GPIO_PIN_1,
@@ -107,28 +101,29 @@ ShiftRegister shift_reg = {.port      = GPIOB,
 Mode       curr_mode         = MODE_KEYPAD;
 Screen     screen            = SC_MAIN;
 EncoderVar curr_enc_var      = ENC_KB_OPTIONS;
+
 bool       updating_menu_var = false;
 uint8_t    prev_menu_pos     = 0;
 uint8_t    curr_menu_pos     = 0;
 char       note_char[5]      = {0}; /* For displaying note to lcd */
-char       value_label[3]; /* Buffer for displaying variables in menu */
+char       value_label[3];          /* Buffer for displaying variables in menu */
 char       note_disp[2];
-
-volatile bool enc_btn_isr_flag = false;
-volatile bool seq_tim_isr_flag = false;
 
 /* Variables relevant to midi data */
 uint8_t    midi_channel              = 0;
 uint8_t    last_note_pressed         = 0;
 
-uint8_t    kb_vars[N_KB_OPTS]        = {10, 100};
+uint8_t    kb_vars[N_KB_OPTS]        = {10, 100};     /* Octave, velocity */
 uint8_t    prev_kb_vars[N_KB_OPTS]   = {0, 0};
 
-uint8_t    seq_vars[SQ_VAR_N]      = {120, 50, 0, 0};
+uint8_t    seq_vars[SQ_VAR_N]      = {120, 50, 1, 0}; /* BPM, length, playing, step*/
 uint8_t    prev_seq_vars[SQ_VAR_N] = {0};
 
 uint8_t    sequence[8]  = {69, 71, 72, 74, 76, 77, 79, 80};
 
+/* Flags for interrupt routines */
+volatile bool enc_btn_isr_flag = false;
+volatile bool seq_tim_isr_flag = false;
 
 /* USER CODE END 0 */
 
@@ -175,18 +170,21 @@ int main(void)
 	{
 		/* Handle encoder push button */
 		handle_encoder();
-		if(seq_tim_isr_flag)
+		if(seq_vars[SQ_VAR_PLAYING])
 		{
-			if(seq_vars[SQ_VAR_STEP] < N_SEQ_STEPS-1)
+			if(seq_tim_isr_flag)
 			{
-				seq_vars[SQ_VAR_STEP]++;
+				if(seq_vars[SQ_VAR_STEP] < N_SEQ_STEPS-1)
+				{
+					seq_vars[SQ_VAR_STEP]++;
+				}
+				else
+				{
+					seq_vars[SQ_VAR_STEP] = 0;
+				}
+				update_menu();
+				seq_tim_isr_flag = false;
 			}
-			else
-			{
-				seq_vars[SQ_VAR_STEP] = 0;
-			}
-			update_menu();
-			seq_tim_isr_flag = false;
 		}
 
 		switch(curr_mode)
@@ -340,13 +338,7 @@ void init_peripherals(void)
 
 	HAL_Delay(2000);/* Wait for usb to initialize */
 
-	/* Init lcd */
-//	LCD_Init(&lcd);
-//	LCD_SetCursor(&lcd, 0, 1);
-//	LCD_DisableCursor(&lcd);
-//
-//	LCD_SetCursor(&lcd, 0, 0);
-
+	/* Init oled */
 	ssd1306_Init();
 	HAL_Delay(1000);
 	ssd1306_Fill(Black);
@@ -567,18 +559,36 @@ void draw_sequencer_main_screen(void)
 	ssd1306_SetCursor(88, OLED_ROW_1);
 	if(seq_vars[SQ_VAR_PLAYING])
 	{
-		ssd1306_WriteString("PLAY", Font_11x18, White);
+		/* Draw triangle for play symbol */
+		/* Draw top part of triangle */
+		for (int y = 0; y < 8; y++)
+		{
+			for (int x = 0; x < y; x++)
+			{
+				ssd1306_DrawPixel(x + 99, y, White);
+			}
+		}
+		/* Draw bottom part of triangle*/
+		int width = 0;
+		for (int y = 8; y > 0; y--)
+		{
+			for (int x = 0; x < y; x++)
+			{
+				ssd1306_DrawPixel(x + 99, width + 8, White);
+			}
+			width++;
+		}
 	}
 	else
 	{
-		ssd1306_WriteString("STOP", Font_11x18, White);
-//		for (int i = 0; i < 16; i++)
-//		{
-//			for (int j = 0; j < 16; j++)
-//			{
-//				ssd1306_DrawPixel(j + 77, i, White);
-//			}
-//		}
+		/* Draw square for stop */
+		for (int i = 0; i < 16; i++)
+		{
+			for (int j = 0; j < 8; j++)
+			{
+				ssd1306_DrawPixel(j + 99, i, White);
+			}
+		}
 	}
 
 	ssd1306_SetCursor(88, OLED_ROW_2);
@@ -617,6 +627,23 @@ void state_keypad(void)
 
 void state_sequencer(void)
 {
+
+	if(seq_vars[SQ_VAR_PLAYING])
+	{
+		if(seq_tim_isr_flag)
+		{
+			if(seq_vars[SQ_VAR_STEP] < N_SEQ_STEPS-1)
+			{
+				seq_vars[SQ_VAR_STEP]++;
+			}
+			else
+			{
+				seq_vars[SQ_VAR_STEP] = 0;
+			}
+			update_menu();
+			seq_tim_isr_flag = false;
+		}
+	}
 //	for(int i = 0; i < 8; ++i)
 //	{
 //		midi_note_on(midi_channel, sequence[i], 127);
