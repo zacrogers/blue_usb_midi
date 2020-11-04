@@ -115,6 +115,7 @@ char       value_label[3]; /* Buffer for displaying variables in menu */
 char       note_disp[2];
 
 volatile bool enc_btn_isr_flag = false;
+volatile bool seq_tim_isr_flag = false;
 
 /* Variables relevant to midi data */
 uint8_t    midi_channel              = 0;
@@ -174,6 +175,19 @@ int main(void)
 	{
 		/* Handle encoder push button */
 		handle_encoder();
+		if(seq_tim_isr_flag)
+		{
+			if(seq_vars[SQ_VAR_STEP] < N_SEQ_STEPS-1)
+			{
+				seq_vars[SQ_VAR_STEP]++;
+			}
+			else
+			{
+				seq_vars[SQ_VAR_STEP] = 0;
+			}
+			update_menu();
+			seq_tim_isr_flag = false;
+		}
 
 		switch(curr_mode)
 		{
@@ -603,13 +617,13 @@ void state_keypad(void)
 
 void state_sequencer(void)
 {
-	for(int i = 0; i < 8; ++i)
-	{
-		midi_note_on(midi_channel, sequence[i], 127);
-		HAL_Delay(1000);
-		midi_note_off(midi_channel, sequence[i], 127);
-		HAL_Delay(1000);
-	}
+//	for(int i = 0; i < 8; ++i)
+//	{
+//		midi_note_on(midi_channel, sequence[i], 127);
+//		HAL_Delay(1000);
+//		midi_note_off(midi_channel, sequence[i], 127);
+//		HAL_Delay(1000);
+//	}
 }
 
 void key_up_handler(const char key)
@@ -638,26 +652,20 @@ void TIM3_IRQHandler(void)
 {
 	if (TIM3->SR & TIM_SR_UIF)
 	{
-		if(seq_vars[SQ_VAR_STEP] < N_SEQ_STEPS-1)
-		{
-			seq_vars[SQ_VAR_STEP]++;
-		}
-		else
-		{
-			seq_vars[SQ_VAR_STEP] = 0;
-		}
-		update_menu();
-		TIM3->CNT = 0;
+
+		seq_tim_isr_flag = true;
+
 		HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
+
+		TIM3->CNT = 0;
 		TIM3->SR &= ~(TIM_SR_UIF);
 	}
-
 }
 
 /* APB1 clock 48MHz*/
 void sequencer_timer_init(void)
 {
-	RCC->APB1RSTR |=  (RCC_APB1RSTR_TIM2RST);
+//	RCC->APB1RSTR |=  (RCC_APB1RSTR_TIM3RST);
 	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
 
 	TIM3->CR1 &= ~(TIM_CR1_CEN);
@@ -666,21 +674,49 @@ void sequencer_timer_init(void)
 	TIM3->PSC = 48000;
 	TIM3->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
 	// Send an update event to reset the timer and apply settings.
-	TIM3->EGR  |= TIM_EGR_UG;
+
 	// Enable the hardware interrupt.
 	TIM3->DIER |= TIM_DIER_UIE;
 
-
 	NVIC_EnableIRQ(TIM3_IRQn);
-	NVIC_SetPriority(TIM3_IRQn, 1);
+	NVIC_SetPriority(TIM3_IRQn, 3);
 	TIM3->CR1 |= TIM_CR1_CEN; /* Enable timer */
+}
+
+void sequencer_timer_start(void)
+{
+//	TIM3->EGR  |= TIM_EGR_UG;
+	sequencer_timer_init();
+//	TIM3->CNT = 0;
+//	TIM3->DIER |= TIM_DIER_UIE;
+//	NVIC_EnableIRQ(TIM3_IRQn);
+//	TIM3->CR1 |= TIM_CR1_CEN; /* Enable timer */
+}
+
+void sequencer_timer_stop(void)
+{
+	TIM3->CR1 &= ~(TIM_CR1_CEN);
+//	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+//
+//	TIM3->EGR  |= TIM_EGR_UG;
+//	TIM3->DIER &= ~TIM_DIER_UIE;
+//
+//	TIM3->SR &= ~(TIM_SR_UIF);
+//	TIM3->CNT = 0;
+//	NVIC_ClearPendingIRQ(TIM3_IRQn);
+//	NVIC_DisableIRQ(TIM3_IRQn);
+//	TIM3->CR1 &= ~TIM_CR1_CEN; /* Disable timer */
+//	TIM3->DIER &= !TIM_DIER_UIE;
+//	TIM3->CNT = 0;
 }
 
 void sequencer_update_bpm(void)
 {
-	TIM3->CR1 &= ~TIM_CR1_CEN; /* Disable timer */
-	TIM3->CNT = 0;
+//	TIM3->CR1 &= ~TIM_CR1_CEN; /* Disable timer */
+//	TIM3->CNT = 0;
+	sequencer_timer_stop();
 	TIM3->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
+	sequencer_timer_start();
 	TIM3->CR1 |= TIM_CR1_CEN; /* Enable timer */
 }
 
@@ -733,7 +769,6 @@ void handle_encoder_btn(void)
 {
 	if(enc_btn_isr_flag)
 	{
-//		HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
 		switch(curr_mode)
 		{
 			case MODE_KEYPAD:
@@ -754,6 +789,7 @@ void handle_encoder_btn(void)
 						}
 						else if(curr_menu_pos == 2)
 						{
+							sequencer_timer_start();
 							screen = SC_MAIN;
 							curr_enc_var = ENC_VAR_NOTHING;
 							updating_menu_var = false;
@@ -761,6 +797,7 @@ void handle_encoder_btn(void)
 					}
 					else
 					{
+						sequencer_timer_stop();
 						curr_enc_var = ENC_KB_OPTIONS;
 						updating_menu_var = false;
 					}

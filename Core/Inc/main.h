@@ -117,8 +117,12 @@ void state_sequencer(void);
 void key_up_handler(const char key);
 void key_down_handler(const char key);
 
+/* Sequencer functions */
 void sequencer_timer_init(void);
+void sequencer_timer_start(void);
+void sequencer_timer_stop(void);
 void sequencer_update_bpm(void);
+
 void encoder_timer_init(void);
 void encoder_button_it_init(void);
 
@@ -169,14 +173,14 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 #define OLED_ROW_2       20
 #define OLED_ROW_3       40
 
-/* Set the top position of the sqeuencer frame */
-#define SEQ_FR_TOP 44
+/* Set the top position of the sequencer frame */
+#define SEQ_FR_TOP       44
 
 /* Defines for menu options */
-#define N_MODES     2
-#define N_KB_OPTS   3
-#define N_SEQ_OPTS  3
-#define N_SEQ_STEPS 8
+#define N_MODES          2
+#define N_KB_OPTS        3
+#define N_SEQ_OPTS       3
+#define N_SEQ_STEPS      8
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
