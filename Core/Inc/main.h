@@ -99,7 +99,7 @@ typedef enum
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-
+#define BPM_TO_MS(bpm) ((60000)/(bpm))
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
@@ -117,6 +117,8 @@ void state_sequencer(void);
 void key_up_handler(const char key);
 void key_down_handler(const char key);
 
+void sequencer_timer_init(void);
+void sequencer_update_bpm(void);
 void encoder_timer_init(void);
 void encoder_button_it_init(void);
 
@@ -167,6 +169,7 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 #define OLED_ROW_2       20
 #define OLED_ROW_3       40
 
+/* Set the top position of the sqeuencer frame */
 #define SEQ_FR_TOP 44
 
 /* Defines for menu options */

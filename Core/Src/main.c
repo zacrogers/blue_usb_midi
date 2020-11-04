@@ -105,7 +105,7 @@ ShiftRegister shift_reg = {.port      = GPIOB,
 
 /* Variables relevant to the menu system */
 Mode       curr_mode         = MODE_KEYPAD;
-Screen     screen            = SC_OPTIONS;
+Screen     screen            = SC_MAIN;
 EncoderVar curr_enc_var      = ENC_KB_OPTIONS;
 bool       updating_menu_var = false;
 uint8_t    prev_menu_pos     = 0;
@@ -123,8 +123,8 @@ uint8_t    last_note_pressed         = 0;
 uint8_t    kb_vars[N_KB_OPTS]        = {10, 100};
 uint8_t    prev_kb_vars[N_KB_OPTS]   = {0, 0};
 
-uint8_t    seq_vars[N_SEQ_OPTS]      = {200, 50, 0};
-uint8_t    prev_seq_vars[N_SEQ_OPTS] = {0};
+uint8_t    seq_vars[SQ_VAR_N]      = {120, 50, 0, 0};
+uint8_t    prev_seq_vars[SQ_VAR_N] = {0};
 
 uint8_t    sequence[8]  = {69, 71, 72, 74, 76, 77, 79, 80};
 
@@ -164,6 +164,7 @@ int main(void)
 	gpio_init(); //  remember to comment out MX_USB_DEVICE_Init(); if MX regenerates it
 
 	init_peripherals();
+	sequencer_timer_init();
 
   /* USER CODE END 2 */
 
@@ -357,8 +358,9 @@ void update_menu(void)
 		{
 			if(screen == SC_MAIN)
 			{
-//				draw_keypad_main_screen();
 				draw_sequencer_main_screen();
+//				draw_keypad_main_screen();
+
 			}
 			else if(screen == SC_OPTIONS)
 			{
@@ -371,7 +373,7 @@ void update_menu(void)
 		{
 			if(screen == SC_MAIN)
 			{
-
+				draw_sequencer_main_screen();
 			}
 			else if(screen == SC_OPTIONS)
 			{
@@ -588,7 +590,7 @@ void draw_sequencer_main_screen(void)
 	/* Draw final vertical line */
 	for (int i = 0; i < 16; i++){ssd1306_DrawPixel(127, i + SEQ_FR_TOP, White);}
 
-	draw_sequencer_step(3);
+	draw_sequencer_step(seq_vars[SQ_VAR_STEP]);
 
 	ssd1306_UpdateScreen();
 }
@@ -631,6 +633,57 @@ void key_down_handler(const char key)
 	update_menu();
 }
 
+/* Sequencer timer */
+void TIM3_IRQHandler(void)
+{
+	if (TIM3->SR & TIM_SR_UIF)
+	{
+		if(seq_vars[SQ_VAR_STEP] < N_SEQ_STEPS-1)
+		{
+			seq_vars[SQ_VAR_STEP]++;
+		}
+		else
+		{
+			seq_vars[SQ_VAR_STEP] = 0;
+		}
+		update_menu();
+		TIM3->CNT = 0;
+		HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
+		TIM3->SR &= ~(TIM_SR_UIF);
+	}
+
+}
+
+/* APB1 clock 48MHz*/
+void sequencer_timer_init(void)
+{
+	RCC->APB1RSTR |=  (RCC_APB1RSTR_TIM2RST);
+	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+
+	TIM3->CR1 &= ~(TIM_CR1_CEN);
+
+	TIM3->CNT  = 0;
+	TIM3->PSC = 48000;
+	TIM3->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
+	// Send an update event to reset the timer and apply settings.
+	TIM3->EGR  |= TIM_EGR_UG;
+	// Enable the hardware interrupt.
+	TIM3->DIER |= TIM_DIER_UIE;
+
+
+	NVIC_EnableIRQ(TIM3_IRQn);
+	NVIC_SetPriority(TIM3_IRQn, 1);
+	TIM3->CR1 |= TIM_CR1_CEN; /* Enable timer */
+}
+
+void sequencer_update_bpm(void)
+{
+	TIM3->CR1 &= ~TIM_CR1_CEN; /* Disable timer */
+	TIM3->CNT = 0;
+	TIM3->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
+	TIM3->CR1 |= TIM_CR1_CEN; /* Enable timer */
+}
+
 void encoder_timer_init(void)
 {
 	/* Enable clocks */
@@ -643,6 +696,7 @@ void encoder_timer_init(void)
 	TIM2->SMCR |= TIM_SMCR_SMS_0;                           /* Set encoder mode */
 	TIM2->CR1 |= TIM_CR1_CEN ;                              /* Enable timer */
 }
+
 
 /* For handling encoder button */
 void EXTI15_10_IRQHandler(void)
@@ -679,7 +733,7 @@ void handle_encoder_btn(void)
 {
 	if(enc_btn_isr_flag)
 	{
-		HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
+//		HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
 		switch(curr_mode)
 		{
 			case MODE_KEYPAD:
