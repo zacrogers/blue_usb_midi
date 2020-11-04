@@ -123,6 +123,8 @@ uint8_t    sequence[8]  = {69, 71, 72, 74, 76, 77, 79, 80};
 
 /* Flags for interrupt routines */
 volatile bool enc_btn_isr_flag = false;
+volatile bool enc_btnlong_press = false;
+volatile int enc_btn_long_press_cnt = 0;
 volatile bool seq_tim_isr_flag = false;
 
 /* USER CODE END 0 */
@@ -168,24 +170,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
-		/* Handle encoder push button */
+		state_change();
 		handle_encoder();
-		if(seq_vars[SQ_VAR_PLAYING])
-		{
-			if(seq_tim_isr_flag)
-			{
-				if(seq_vars[SQ_VAR_STEP] < N_SEQ_STEPS-1)
-				{
-					seq_vars[SQ_VAR_STEP]++;
-				}
-				else
-				{
-					seq_vars[SQ_VAR_STEP] = 0;
-				}
-				update_menu();
-				seq_tim_isr_flag = false;
-			}
-		}
 
 		switch(curr_mode)
 		{
@@ -356,6 +342,10 @@ void init_peripherals(void)
 	shift_reg_set(&shift_reg, 0);
 }
 
+
+/********************************
+ *** Oled and menu functions ****
+ ********************************/
 void update_menu(void)
 {
 	switch (curr_mode)
@@ -364,8 +354,7 @@ void update_menu(void)
 		{
 			if(screen == SC_MAIN)
 			{
-				draw_sequencer_main_screen();
-//				draw_keypad_main_screen();
+				draw_keypad_main_screen();
 
 			}
 			else if(screen == SC_OPTIONS)
@@ -393,7 +382,6 @@ void update_menu(void)
 
 				}
 			}
-
 			break;
 		}
 	}
@@ -519,13 +507,11 @@ void draw_keypad_options_screen(void)
 		ssd1306_WriteString((char *)kb_labels[N_KB_OPTS-1], Font_11x18, White);
 	}
 
-//	ssd1306_SetCursor(0, OLED_ROW_3);
-//	ssd1306_WriteString("---------", Font_11x18, White);
-
 	ssd1306_UpdateScreen();
 }
 #endif
 
+/* Draw the rectangle representing current step */
 void draw_sequencer_step(uint8_t step)
 {
 	for (int i = 0; i < 16; i++)
@@ -591,6 +577,7 @@ void draw_sequencer_main_screen(void)
 		}
 	}
 
+	/* Draw note val of current step */
 	ssd1306_SetCursor(88, OLED_ROW_2);
 	ssd1306_WriteString((char *)note_disp, Font_11x18, White);
 
@@ -620,14 +607,31 @@ void draw_sequencer_main_screen(void)
 }
 
 
+/*****************************
+ ****** State functions ******
+ *****************************/
+void state_change(void)
+{
+	if(HAL_GPIO_ReadPin(MODE_SEL_SW_PORT, MODE_SEL_SW_PIN) == 1)
+	{
+		curr_mode = MODE_KEYPAD;
+		update_menu();
+	}
+	else
+	{
+		curr_mode = MODE_SEQUENCER;
+		update_menu();
+	}
+}
+
 void state_keypad(void)
 {
 	keypad_scan(&keypad);
 }
 
+/* Loop through sequencer values on timer overflow */
 void state_sequencer(void)
 {
-
 	if(seq_vars[SQ_VAR_PLAYING])
 	{
 		if(seq_tim_isr_flag)
@@ -640,6 +644,11 @@ void state_sequencer(void)
 			{
 				seq_vars[SQ_VAR_STEP] = 0;
 			}
+
+			int ind = sequence[seq_vars[SQ_VAR_STEP]] % NUM_SEMITONES;
+
+			/* Copy note to string for oled display*/
+			strcpy(note_disp, note_to_string[ind]);
 			update_menu();
 			seq_tim_isr_flag = false;
 		}
@@ -653,6 +662,10 @@ void state_sequencer(void)
 //	}
 }
 
+
+/***************************
+ **** Keypad functions *****
+ ***************************/
 void key_up_handler(const char key)
 {
 	midi_note_off(midi_channel, last_note_pressed, kb_vars[KB_VAR_VELOCITY]);
@@ -663,7 +676,7 @@ void key_down_handler(const char key)
 	HAL_Delay(100); /* Debounce */
 
 	int base_note = kb_vars[KB_VAR_OCTAVE] * NUM_SEMITONES;
-	int note_val  = key + ((base_note < 127) ? 127 : base_note); // limit upper note to 12
+//	int note_val  = key + ((base_note < 127) ? 127 : base_note); // limit upper note to 12
 	int ind       = key % NUM_SEMITONES;
 
 	/* Copy note to string for oled display*/
@@ -674,12 +687,16 @@ void key_down_handler(const char key)
 	update_menu();
 }
 
+
+/*******************************
+ ***** Sequencer functions *****
+ *******************************/
+
 /* Sequencer timer */
 void TIM3_IRQHandler(void)
 {
 	if (TIM3->SR & TIM_SR_UIF)
 	{
-
 		seq_tim_isr_flag = true;
 
 		HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
@@ -747,6 +764,10 @@ void sequencer_update_bpm(void)
 	TIM3->CR1 |= TIM_CR1_CEN; /* Enable timer */
 }
 
+
+/*****************************
+ ***** Encoder functions *****
+ *****************************/
 void encoder_timer_init(void)
 {
 	/* Enable clocks */
@@ -766,6 +787,13 @@ void EXTI15_10_IRQHandler(void)
 {
 	if(EXTI->PR & EXTI_PR_PR14)
 	{
+//		while(HAL_GPIO_ReadPin(ENC_BTN_PORT, ENC_BTN_PIN))
+//		{
+//			if(++enc_btn_long_press_cnt >= 0xff)
+//			{
+//				HAL_GPIO_TogglePin(ENC_BTN_PORT, ENC_BTN_PIN);
+//			}
+//		}
 		enc_btn_isr_flag = true;
 		handle_encoder_btn();
 		EXTI->PR |= EXTI_PR_PR14;
