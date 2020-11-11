@@ -67,6 +67,7 @@ typedef enum
 	ENC_SQ_OPTIONS,
 	ENC_SQ_VAR_TEMPO,
 	ENC_SQ_VAR_LENGTH,
+	ENC_SQ_VAR_STEP,
 	ENC_VAR_NOTHING
 }EncoderVar;
 
@@ -128,11 +129,12 @@ void encoder_button_it_init(void);
 
 /* Handles the mapping of what value the encoder is controlling */
 void handle_encoder(void);
-
+void handle_encoder_2(void);
 /* Updates a variable from the timer count value
  * and wraps values around at the limits */
 void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val);
 void handle_encoder_btn(void);
+void handle_encoder_btn_2(void);
 
 /* Redraw the menu */
 void update_menu(void);
@@ -154,6 +156,9 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 
 #define ENC_BTN_PORT     GPIOC
 #define ENC_BTN_PIN      GPIO_PIN_14
+
+#define ENC2_BTN_PORT    GPIOC
+#define ENC2_BTN_PIN     GPIO_PIN_14
 
 #define MODE_SEL_SW_PORT GPIOB
 #define MODE_SEL_SW_PIN  GPIO_PIN_11

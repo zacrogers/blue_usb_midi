@@ -101,6 +101,7 @@ ShiftRegister shift_reg = {.port      = GPIOB,
 Mode       curr_mode         = MODE_KEYPAD;
 Screen     screen            = SC_MAIN;
 EncoderVar curr_enc_var      = ENC_KB_OPTIONS;
+EncoderVar curr_enc2_var     = ENC_KB_OPTIONS;
 
 bool       updating_menu_var = false;
 uint8_t    prev_menu_pos     = 0;
@@ -123,6 +124,7 @@ uint8_t    sequence[8]  = {69, 71, 72, 74, 76, 77, 79, 80};
 
 /* Flags for interrupt routines */
 volatile bool enc_btn_isr_flag = false;
+volatile bool enc_btn2_isr_flag = false;
 volatile bool enc_btnlong_press = false;
 volatile int enc_btn_long_press_cnt = 0;
 volatile bool seq_tim_isr_flag = false;
@@ -336,6 +338,9 @@ void init_peripherals(void)
 	/* Init rotary encoder*/
 	encoder_timer_init();
 	encoder_button_it_init();
+	/*
+	 * Need to write initialisers for  second encoder
+	 */
 
 	/* Init shift register */
 	shift_reg_init(&shift_reg);
@@ -653,13 +658,6 @@ void state_sequencer(void)
 			seq_tim_isr_flag = false;
 		}
 	}
-//	for(int i = 0; i < 8; ++i)
-//	{
-//		midi_note_on(midi_channel, sequence[i], 127);
-//		HAL_Delay(1000);
-//		midi_note_off(midi_channel, sequence[i], 127);
-//		HAL_Delay(1000);
-//	}
 }
 
 
@@ -714,7 +712,7 @@ void sequencer_timer_init(void)
 
 	TIM3->CR1 &= ~(TIM_CR1_CEN);
 
-	TIM3->CNT  = 0;
+	TIM3->CNT = 0;
 	TIM3->PSC = 48000;
 	TIM3->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
 	// Send an update event to reset the timer and apply settings.
@@ -774,11 +772,23 @@ void encoder_timer_init(void)
 	RCC->APB2ENR |= RCC_APB2ENR_AFIOEN | RCC_APB2ENR_IOPBEN;
 	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
 
+	/* Setup encoder timer 1 */
 	TIM2->ARR = 0xFFFF;
 	TIM2->CCMR1 |= (TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0 );  /* Map chans to timer inputs */
 	TIM2->CCER &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P);         /* Trigger on rising edge */
 	TIM2->SMCR |= TIM_SMCR_SMS_0;                           /* Set encoder mode */
 	TIM2->CR1 |= TIM_CR1_CEN ;                              /* Enable timer */
+
+
+	/* Enable clocks */
+	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
+
+	/* Setup encoder timer 2 */
+	TIM4->ARR = 0xFFFF;
+	TIM4->CCMR1 |= (TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0 );  /* Map chans to timer inputs */
+	TIM4->CCER &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P);         /* Trigger on rising edge */
+	TIM4->SMCR |= TIM_SMCR_SMS_0;                           /* Set encoder mode */
+	TIM4->CR1 |= TIM_CR1_CEN ;                              /* Enable timer */
 }
 
 
@@ -787,13 +797,6 @@ void EXTI15_10_IRQHandler(void)
 {
 	if(EXTI->PR & EXTI_PR_PR14)
 	{
-//		while(HAL_GPIO_ReadPin(ENC_BTN_PORT, ENC_BTN_PIN))
-//		{
-//			if(++enc_btn_long_press_cnt >= 0xff)
-//			{
-//				HAL_GPIO_TogglePin(ENC_BTN_PORT, ENC_BTN_PIN);
-//			}
-//		}
 		enc_btn_isr_flag = true;
 		handle_encoder_btn();
 		EXTI->PR |= EXTI_PR_PR14;
@@ -802,6 +805,7 @@ void EXTI15_10_IRQHandler(void)
 
 void encoder_button_it_init(void)
 {
+	/* Init button 1*/
 	RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
 
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -818,6 +822,22 @@ void encoder_button_it_init(void)
 
 	NVIC_EnableIRQ(EXTI15_10_IRQn);
 	NVIC_SetPriority(EXTI15_10_IRQn, 0);
+
+	/* Init button 2*/
+//	RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
+//
+//	GPIO_InitStruct.Pin = ENC_BTN_PIN;
+//	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+//	GPIO_InitStruct.Pull = GPIO_NOPULL;
+//	HAL_GPIO_Init(ENC_BTN_PORT, &GPIO_InitStruct);
+//
+//	AFIO->EXTICR[3] |= AFIO_EXTICR4_EXTI14_PC;
+//
+//	EXTI->IMR |= EXTI_IMR_MR14;
+//	EXTI->RTSR |= EXTI_RTSR_TR14;
+//
+//	NVIC_EnableIRQ(EXTI15_10_IRQn);
+//	NVIC_SetPriority(EXTI15_10_IRQn, 0);
 }
 
 void handle_encoder_btn(void)
@@ -872,6 +892,61 @@ void handle_encoder_btn(void)
 		update_menu();
 		enc_btn_isr_flag = false;
 	}
+}
+
+void handle_encoder_btn_2(void)
+{
+	if(enc_btn2_isr_flag)
+	{
+		switch(curr_mode)
+		{
+			case MODE_KEYPAD:
+			{
+				if(screen == SC_OPTIONS)
+				{
+//					if(!updating_menu_var)
+//					{
+//						if(curr_menu_pos == KB_VAR_OCTAVE)
+//						{
+//							curr_enc_var = ENC_KB_VAR_OCTAVE;
+//							updating_menu_var = true;
+//						}
+//						else if(curr_menu_pos == KB_VAR_VELOCITY)
+//						{
+//							curr_enc_var = ENC_KB_VAR_VELOCITY;
+//							updating_menu_var = true;
+//						}
+//						else if(curr_menu_pos == 2)
+//						{
+//							sequencer_timer_start();
+//							screen = SC_MAIN;
+//							curr_enc_var = ENC_VAR_NOTHING;
+//							updating_menu_var = false;
+//						}
+//					}
+//					else
+//					{
+//						sequencer_timer_stop();
+//						curr_enc_var = ENC_KB_OPTIONS;
+//						updating_menu_var = false;
+//					}
+				}
+				if(screen == SC_MAIN)
+				{
+					curr_enc_var = ENC_KB_OPTIONS;
+					screen = SC_OPTIONS;
+				}
+				break;
+			}
+			case MODE_SEQUENCER:
+			{
+				break;
+			}
+		}
+		update_menu();
+		enc_btn2_isr_flag = false;
+	}
+
 }
 
 long map(long x, long in_min, long in_max, long out_min, long out_max)
@@ -941,6 +1016,38 @@ void handle_encoder(void)
 		}
 		case ENC_VAR_NOTHING:
 		{
+			break;
+		}
+	}
+}
+
+void handle_encoder2(void)
+{
+	switch(curr_enc2_var)
+	{
+		case ENC_KB_VAR_OCTAVE:
+		{
+			update_encoder(0, MAX_MIDI_OCTAVES, &kb_vars[KB_VAR_OCTAVE], &prev_kb_vars[KB_VAR_OCTAVE]);
+			break;
+		}
+		case ENC_KB_VAR_VELOCITY:
+		{
+			update_encoder(0, MAX_VELOCITY, &kb_vars[KB_VAR_VELOCITY], &prev_kb_vars[KB_VAR_VELOCITY]);
+			break;
+		}
+		case ENC_SQ_VAR_TEMPO:
+		{
+			update_encoder(MIN_BPM, MAX_BPM, &seq_vars[ENC_SQ_VAR_TEMPO], &prev_seq_vars[ENC_SQ_VAR_TEMPO]);
+			break;
+		}
+		case ENC_SQ_VAR_LENGTH:
+		{
+			update_encoder(0, MAX_VELOCITY, &seq_vars[ENC_SQ_VAR_LENGTH], &prev_seq_vars[ENC_SQ_VAR_LENGTH]);
+			break;
+		}
+		case ENC_SQ_VAR_STEP:
+		{
+			update_encoder(0, N_SEQ_STEPS, &seq_vars[ENC_SQ_VAR_STEP], &prev_seq_vars[ENC_SQ_VAR_STEP]);
 			break;
 		}
 	}
