@@ -415,61 +415,7 @@ void draw_keypad_main_screen(void)
 
 	ssd1306_UpdateScreen();
 }
-#ifdef NEW_OPTIONS_SCREEN
 
-void draw_keypad_options_screen(void)
-{
-
-	ssd1306_Fill(Black); /* Clear screen*/
-
-	/* Draw page title header */
-//	ssd1306_DrawRect(0, 0, 16, 128, White);
-	for (int i = 0; i < 16; i++)
-	{
-		for (int j = 0; j < 128; j++)
-		{
-			ssd1306_DrawPixel(j, i, White);
-		}
-	}
-
-	ssd1306_SetCursor(0, OLED_ROW_1);
-	ssd1306_WriteString((char *)mode_labels[MODE_KEYPAD], Font_11x18, Black);
-
-	ssd1306_SetCursor(0, OLED_ROW_2);
-
-//	/* Change selected index icon if editing value */
-//	if(updating_menu_var)
-//		ssd1306_WriteString("+", Font_11x18, White);
-//	else
-//		ssd1306_WriteString("-", Font_11x18, White);
-
-	if(curr_menu_pos < N_KB_OPTS)
-	{
-		if(curr_menu_pos < prev_menu_pos)
-		ssd1306_SetCursor(0, row_offsets[curr_menu_pos+1]);
-		ssd1306_WriteString("-", Font_11x18, White);
-		ssd1306_SetCursor(11, OLED_ROW_2);
-		ssd1306_WriteString((char *)kb_labels[curr_menu_pos], Font_11x18, White);
-
-		itoa(kb_vars[curr_menu_pos], value_label, 10);
-
-		ssd1306_SetCursor(77, OLED_ROW_2);
-		ssd1306_WriteString((char *)value_label, Font_11x18, White);
-	}
-//	else if(curr_menu_pos == N_KB_OPTS)
-//	{
-//		ssd1306_SetCursor(11, OLED_ROW_2);
-//		ssd1306_WriteString((char *)back_label, Font_11x18, White);
-//	}
-
-//	ssd1306_SetCursor(0, OLED_ROW_3);
-//	ssd1306_WriteString("---------", Font_11x18, White);
-
-	ssd1306_UpdateScreen();
-}
-
-
-#else
 void draw_keypad_options_screen(void)
 {
 
@@ -514,7 +460,7 @@ void draw_keypad_options_screen(void)
 
 	ssd1306_UpdateScreen();
 }
-#endif
+
 
 /* Draw the rectangle representing current step */
 void draw_sequencer_step(uint8_t step)
@@ -691,16 +637,29 @@ void key_down_handler(const char key)
  *******************************/
 
 /* Sequencer timer */
-void TIM3_IRQHandler(void)
+//void TIM3_IRQHandler(void)
+//{
+//	if (TIM3->SR & TIM_SR_UIF)
+//	{
+//		seq_tim_isr_flag = true;
+//
+//		HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
+//
+//		TIM3->CNT = 0;
+//		TIM3->SR &= ~(TIM_SR_UIF);
+//	}
+//}
+
+void TIM4_IRQHandler(void)
 {
-	if (TIM3->SR & TIM_SR_UIF)
+	if (TIM4->SR & TIM_SR_UIF)
 	{
 		seq_tim_isr_flag = true;
 
 		HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
 
-		TIM3->CNT = 0;
-		TIM3->SR &= ~(TIM_SR_UIF);
+		TIM4->CNT = 0;
+		TIM4->SR &= ~(TIM_SR_UIF);
 	}
 }
 
@@ -708,21 +667,37 @@ void TIM3_IRQHandler(void)
 void sequencer_timer_init(void)
 {
 //	RCC->APB1RSTR |=  (RCC_APB1RSTR_TIM3RST);
-	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+//	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+//
+//	TIM3->CR1 &= ~(TIM_CR1_CEN);
+//
+//	TIM3->CNT = 0;
+//	TIM3->PSC = 48000;
+//	TIM3->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
+//	// Send an update event to reset the timer and apply settings.
+//
+//	// Enable the hardware interrupt.
+//	TIM3->DIER |= TIM_DIER_UIE;
+//
+//	NVIC_EnableIRQ(TIM3_IRQn);
+//	NVIC_SetPriority(TIM3_IRQn, 3);
+//	TIM3->CR1 |= TIM_CR1_CEN; /* Enable timer */
 
-	TIM3->CR1 &= ~(TIM_CR1_CEN);
+	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
 
-	TIM3->CNT = 0;
-	TIM3->PSC = 48000;
-	TIM3->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
+	TIM4->CR1 &= ~(TIM_CR1_CEN);
+
+	TIM4->CNT = 0;
+	TIM4->PSC = 48000;
+	TIM4->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
 	// Send an update event to reset the timer and apply settings.
 
 	// Enable the hardware interrupt.
-	TIM3->DIER |= TIM_DIER_UIE;
+	TIM4->DIER |= TIM_DIER_UIE;
 
-	NVIC_EnableIRQ(TIM3_IRQn);
-	NVIC_SetPriority(TIM3_IRQn, 3);
-	TIM3->CR1 |= TIM_CR1_CEN; /* Enable timer */
+	NVIC_EnableIRQ(TIM4_IRQn);
+	NVIC_SetPriority(TIM4_IRQn, 3);
+	TIM4->CR1 |= TIM_CR1_CEN; /* Enable timer */
 }
 
 void sequencer_timer_start(void)
@@ -757,9 +732,9 @@ void sequencer_update_bpm(void)
 //	TIM3->CR1 &= ~TIM_CR1_CEN; /* Disable timer */
 //	TIM3->CNT = 0;
 	sequencer_timer_stop();
-	TIM3->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
+	TIM4->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
 	sequencer_timer_start();
-	TIM3->CR1 |= TIM_CR1_CEN; /* Enable timer */
+	TIM4->CR1 |= TIM_CR1_CEN; /* Enable timer */
 }
 
 
@@ -781,14 +756,14 @@ void encoder_timer_init(void)
 
 
 	/* Enable clocks */
-	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
-
-	/* Setup encoder timer 2 */
-	TIM4->ARR = 0xFFFF;
-	TIM4->CCMR1 |= (TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0 );  /* Map chans to timer inputs */
-	TIM4->CCER &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P);         /* Trigger on rising edge */
-	TIM4->SMCR |= TIM_SMCR_SMS_0;                           /* Set encoder mode */
-	TIM4->CR1 |= TIM_CR1_CEN ;                              /* Enable timer */
+//	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
+//
+//	/* Setup encoder timer 2 */
+//	TIM4->ARR = 0xFFFF;
+//	TIM4->CCMR1 |= (TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0 );  /* Map chans to timer inputs */
+//	TIM4->CCER &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P);         /* Trigger on rising edge */
+//	TIM4->SMCR |= TIM_SMCR_SMS_0;                           /* Set encoder mode */
+//	TIM4->CR1 |= TIM_CR1_CEN ;                              /* Enable timer */
 }
 
 
