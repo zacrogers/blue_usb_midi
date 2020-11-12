@@ -666,23 +666,6 @@ void TIM4_IRQHandler(void)
 /* APB1 clock 48MHz*/
 void sequencer_timer_init(void)
 {
-//	RCC->APB1RSTR |=  (RCC_APB1RSTR_TIM3RST);
-//	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
-//
-//	TIM3->CR1 &= ~(TIM_CR1_CEN);
-//
-//	TIM3->CNT = 0;
-//	TIM3->PSC = 48000;
-//	TIM3->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
-//	// Send an update event to reset the timer and apply settings.
-//
-//	// Enable the hardware interrupt.
-//	TIM3->DIER |= TIM_DIER_UIE;
-//
-//	NVIC_EnableIRQ(TIM3_IRQn);
-//	NVIC_SetPriority(TIM3_IRQn, 3);
-//	TIM3->CR1 |= TIM_CR1_CEN; /* Enable timer */
-
 	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
 
 	TIM4->CR1 &= ~(TIM_CR1_CEN);
@@ -702,29 +685,17 @@ void sequencer_timer_init(void)
 
 void sequencer_timer_start(void)
 {
-//	TIM3->EGR  |= TIM_EGR_UG;
+//	TIM4->EGR  |= TIM_EGR_UG;
 	sequencer_timer_init();
-//	TIM3->CNT = 0;
-//	TIM3->DIER |= TIM_DIER_UIE;
-//	NVIC_EnableIRQ(TIM3_IRQn);
-//	TIM3->CR1 |= TIM_CR1_CEN; /* Enable timer */
+//	TIM4->CNT = 0;
+//	TIM4->DIER |= TIM_DIER_UIE;
+//	NVIC_EnableIRQ(TIM4_IRQn);
+//	TIM4->CR1 |= TIM_CR1_CEN; /* Enable timer */
 }
 
 void sequencer_timer_stop(void)
 {
-	TIM3->CR1 &= ~(TIM_CR1_CEN);
-//	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
-//
-//	TIM3->EGR  |= TIM_EGR_UG;
-//	TIM3->DIER &= ~TIM_DIER_UIE;
-//
-//	TIM3->SR &= ~(TIM_SR_UIF);
-//	TIM3->CNT = 0;
-//	NVIC_ClearPendingIRQ(TIM3_IRQn);
-//	NVIC_DisableIRQ(TIM3_IRQn);
-//	TIM3->CR1 &= ~TIM_CR1_CEN; /* Disable timer */
-//	TIM3->DIER &= !TIM_DIER_UIE;
-//	TIM3->CNT = 0;
+	TIM4->CR1 &= ~(TIM_CR1_CEN);
 }
 
 void sequencer_update_bpm(void)
@@ -801,10 +772,10 @@ void encoder_button_it_init(void)
 	/* Init button 2*/
 //	RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
 //
-//	GPIO_InitStruct.Pin = ENC_BTN_PIN;
+//	GPIO_InitStruct.Pin = ENC2_BTN_PIN;
 //	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
 //	GPIO_InitStruct.Pull = GPIO_NOPULL;
-//	HAL_GPIO_Init(ENC_BTN_PORT, &GPIO_InitStruct);
+//	HAL_GPIO_Init(ENC2_BTN_PORT, &GPIO_InitStruct);
 //
 //	AFIO->EXTICR[3] |= AFIO_EXTICR4_EXTI14_PC;
 //
@@ -877,44 +848,21 @@ void handle_encoder_btn_2(void)
 		{
 			case MODE_KEYPAD:
 			{
-				if(screen == SC_OPTIONS)
-				{
-//					if(!updating_menu_var)
-//					{
-//						if(curr_menu_pos == KB_VAR_OCTAVE)
-//						{
-//							curr_enc_var = ENC_KB_VAR_OCTAVE;
-//							updating_menu_var = true;
-//						}
-//						else if(curr_menu_pos == KB_VAR_VELOCITY)
-//						{
-//							curr_enc_var = ENC_KB_VAR_VELOCITY;
-//							updating_menu_var = true;
-//						}
-//						else if(curr_menu_pos == 2)
-//						{
-//							sequencer_timer_start();
-//							screen = SC_MAIN;
-//							curr_enc_var = ENC_VAR_NOTHING;
-//							updating_menu_var = false;
-//						}
-//					}
-//					else
-//					{
-//						sequencer_timer_stop();
-//						curr_enc_var = ENC_KB_OPTIONS;
-//						updating_menu_var = false;
-//					}
-				}
-				if(screen == SC_MAIN)
-				{
-					curr_enc_var = ENC_KB_OPTIONS;
-					screen = SC_OPTIONS;
-				}
+				curr_enc2_var = ENC_KB_VAR_VELOCITY;
 				break;
 			}
 			case MODE_SEQUENCER:
 			{
+				/* If in sequencer mode encoder 2 button toggles play state*/
+				if(seq_vars[SQ_VAR_PLAYING])
+				{
+					seq_vars[SQ_VAR_PLAYING] = 0;
+				}
+				else
+				{
+					seq_vars[SQ_VAR_PLAYING] = 1;
+				}
+
 				break;
 			}
 		}
@@ -955,6 +903,32 @@ void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_v
 	*prev_val = *curr_val;
 }
 
+void update_encoder2(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val)
+{
+	/* Increments twice per click so divide by 2*/
+	*curr_val = TIM2->CNT/2;
+
+	if(*prev_val != *curr_val)
+	{
+		update_menu();
+	}
+
+	/* Check bounds and wrap if necessary*/
+	if(*curr_val == 0xff && *prev_val == min)
+	{
+		TIM3->CNT = 0;
+		*curr_val = 0;
+	}
+	else if(*curr_val > max)
+	{
+		TIM3->CNT = min;
+		*curr_val = min;
+	}
+
+	*prev_val = *curr_val;
+}
+
+
 void handle_encoder(void)
 {
 	switch(curr_enc_var)
@@ -987,10 +961,6 @@ void handle_encoder(void)
 		case ENC_SQ_VAR_LENGTH:
 		{
 			update_encoder(0, MAX_VELOCITY, &seq_vars[ENC_SQ_VAR_LENGTH], &prev_seq_vars[ENC_SQ_VAR_LENGTH]);
-			break;
-		}
-		case ENC_VAR_NOTHING:
-		{
 			break;
 		}
 	}
