@@ -157,8 +157,8 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 #define ENC_BTN_PORT     GPIOC
 #define ENC_BTN_PIN      GPIO_PIN_14
 
-#define ENC2_BTN_PORT    GPIOC
-#define ENC2_BTN_PIN     GPIO_PIN_15
+#define ENC2_BTN_PORT    GPIOB
+#define ENC2_BTN_PIN     GPIO_PIN_1
 
 #define MODE_SEL_SW_PORT GPIOB
 #define MODE_SEL_SW_PIN  GPIO_PIN_11

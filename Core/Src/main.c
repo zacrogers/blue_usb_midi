@@ -172,6 +172,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
+
 		state_change();
 		handle_encoder();
 
@@ -563,15 +564,18 @@ void draw_sequencer_main_screen(void)
  *****************************/
 void state_change(void)
 {
-	if(HAL_GPIO_ReadPin(MODE_SEL_SW_PORT, MODE_SEL_SW_PIN) == 1)
+	if(enc_btn2_isr_flag)
 	{
-		curr_mode = MODE_KEYPAD;
+		if(curr_mode == MODE_KEYPAD)
+		{
+			curr_mode = MODE_SEQUENCER;
+		}
+		else if(curr_mode == MODE_SEQUENCER)
+		{
+			curr_mode = MODE_KEYPAD;
+		}
 		update_menu();
-	}
-	else
-	{
-		curr_mode = MODE_SEQUENCER;
-		update_menu();
+		enc_btn2_isr_flag = false;
 	}
 }
 
@@ -656,7 +660,7 @@ void TIM4_IRQHandler(void)
 	{
 		seq_tim_isr_flag = true;
 
-		HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
+//		HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
 
 		TIM4->CNT = 0;
 		TIM4->SR &= ~(TIM_SR_UIF);
@@ -738,7 +742,7 @@ void encoder_timer_init(void)
 }
 
 
-/* For handling encoder button */
+/* For handling encoder 1 button */
 void EXTI15_10_IRQHandler(void)
 {
 	if(EXTI->PR & EXTI_PR_PR14)
@@ -746,6 +750,16 @@ void EXTI15_10_IRQHandler(void)
 		enc_btn_isr_flag = true;
 		handle_encoder_btn();
 		EXTI->PR |= EXTI_PR_PR14;
+	}
+}
+
+/* For handling encoder 2 button */
+void EXTI1_IRQHandler(void)
+{
+	if(EXTI->PR & EXTI_PR_PR1)
+	{
+		enc_btn2_isr_flag = true;
+		EXTI->PR |= EXTI_PR_PR1;
 	}
 }
 
@@ -770,20 +784,20 @@ void encoder_button_it_init(void)
 	NVIC_SetPriority(EXTI15_10_IRQn, 0);
 
 	/* Init button 2*/
-//	RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
-//
-//	GPIO_InitStruct.Pin = ENC2_BTN_PIN;
-//	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-//	GPIO_InitStruct.Pull = GPIO_NOPULL;
-//	HAL_GPIO_Init(ENC2_BTN_PORT, &GPIO_InitStruct);
-//
-//	AFIO->EXTICR[3] |= AFIO_EXTICR4_EXTI14_PC;
-//
-//	EXTI->IMR |= EXTI_IMR_MR14;
-//	EXTI->RTSR |= EXTI_RTSR_TR14;
-//
-//	NVIC_EnableIRQ(EXTI15_10_IRQn);
-//	NVIC_SetPriority(EXTI15_10_IRQn, 0);
+	RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
+
+	GPIO_InitStruct.Pin = ENC2_BTN_PIN;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(ENC2_BTN_PORT, &GPIO_InitStruct);
+
+	AFIO->EXTICR[0] |= AFIO_EXTICR1_EXTI1_PB;
+
+	EXTI->IMR |= EXTI_IMR_MR1;
+	EXTI->RTSR |= EXTI_RTSR_TR1;
+
+	NVIC_EnableIRQ(EXTI1_IRQn);
+	NVIC_SetPriority(EXTI1_IRQn, 0);
 }
 
 void handle_encoder_btn(void)
@@ -812,7 +826,6 @@ void handle_encoder_btn(void)
 						{
 							sequencer_timer_start();
 							screen = SC_MAIN;
-							curr_enc_var = ENC_VAR_NOTHING;
 							updating_menu_var = false;
 						}
 					}
