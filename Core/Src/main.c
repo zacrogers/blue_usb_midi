@@ -82,15 +82,15 @@ static void MX_I2C1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 Keypad  keypad = {.rows_port   = GPIOA,
-		          .row_pins[0] = GPIO_PIN_7,
-				  .row_pins[1] = GPIO_PIN_6,
-				  .row_pins[2] = GPIO_PIN_5,
-				  .row_pins[3] = GPIO_PIN_4,
-				  .cols_port   = GPIOA,
-				  .col_pins[0] = GPIO_PIN_3,
-				  .col_pins[1] = GPIO_PIN_2,
-				  .col_pins[2] = GPIO_PIN_8,
-				  .col_pins[3] = GPIO_PIN_9}; /* PA0 and PA1 need to be used for encoder */
+		          .row_pins[0] = GPIO_PIN_5,
+				  .row_pins[1] = GPIO_PIN_4,
+				  .row_pins[2] = GPIO_PIN_3,
+				  .row_pins[3] = GPIO_PIN_2,
+				  .cols_port   = GPIOB,
+				  .col_pins[0] = GPIO_PIN_12,
+				  .col_pins[1] = GPIO_PIN_13,
+				  .col_pins[2] = GPIO_PIN_14,
+				  .col_pins[3] = GPIO_PIN_15}; /* PA0 and PA1 need to be used for encoder */
 
 ShiftRegister shift_reg = {.port      = GPIOB,
 		                   .data_pin  = GPIO_PIN_0,
@@ -175,6 +175,7 @@ int main(void)
 
 		state_change();
 		handle_encoder();
+		handle_encoder_2();
 
 		switch(curr_mode)
 		{
@@ -358,36 +359,13 @@ void update_menu(void)
 	{
 		case MODE_KEYPAD:
 		{
-			if(screen == SC_MAIN)
-			{
-				draw_keypad_main_screen();
-
-			}
-			else if(screen == SC_OPTIONS)
-			{
-				draw_keypad_options_screen();
-			}
+			draw_keypad_main_screen();
 			break;
 		}
 
 		case MODE_SEQUENCER:
 		{
-			if(screen == SC_MAIN)
-			{
-				draw_sequencer_main_screen();
-			}
-			else if(screen == SC_OPTIONS)
-			{
-
-				if(curr_menu_pos <= N_KB_OPTS)
-				{
-
-				}
-				else
-				{
-
-				}
-			}
+			draw_sequencer_main_screen();
 			break;
 		}
 	}
@@ -568,10 +546,16 @@ void state_change(void)
 	{
 		if(curr_mode == MODE_KEYPAD)
 		{
+			curr_enc_var = SQ_VAR_BPM;
+			curr_enc2_var = SQ_VAR_LENGTH;
+			seq_vars[SQ_VAR_PLAYING] = 1;
 			curr_mode = MODE_SEQUENCER;
 		}
 		else if(curr_mode == MODE_SEQUENCER)
 		{
+			curr_enc_var = ENC_KB_VAR_OCTAVE;
+			curr_enc2_var = ENC_KB_VAR_VELOCITY;
+			seq_vars[SQ_VAR_PLAYING] = 0;
 			curr_mode = MODE_KEYPAD;
 		}
 		update_menu();
@@ -731,14 +715,14 @@ void encoder_timer_init(void)
 
 
 	/* Enable clocks */
-//	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
-//
-//	/* Setup encoder timer 2 */
-//	TIM4->ARR = 0xFFFF;
-//	TIM4->CCMR1 |= (TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0 );  /* Map chans to timer inputs */
-//	TIM4->CCER &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P);         /* Trigger on rising edge */
-//	TIM4->SMCR |= TIM_SMCR_SMS_0;                           /* Set encoder mode */
-//	TIM4->CR1 |= TIM_CR1_CEN ;                              /* Enable timer */
+	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+
+	/* Setup encoder timer 2 */
+	TIM3->ARR = 0xFFFF;
+	TIM3->CCMR1 |= (TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0 );  /* Map chans to timer inputs */
+	TIM3->CCER &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P);         /* Trigger on rising edge */
+	TIM3->SMCR |= TIM_SMCR_SMS_0;                           /* Set encoder mode */
+	TIM3->CR1 |= TIM_CR1_CEN ;                              /* Enable timer */
 }
 
 
@@ -898,7 +882,7 @@ void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_v
 	if(*prev_val != *curr_val)
 	{
 		update_menu();
-		shift_reg_set_bar(&shift_reg, map(*curr_val, min, max, 0, 7));
+//		shift_reg_set_bar(&shift_reg, map(*curr_val, min, max, 0, 7));
 	}
 
 	/* Check bounds and wrap if necessary*/
@@ -919,7 +903,7 @@ void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_v
 void update_encoder2(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val)
 {
 	/* Increments twice per click so divide by 2*/
-	*curr_val = TIM2->CNT/2;
+	*curr_val = TIM3->CNT/2;
 
 	if(*prev_val != *curr_val)
 	{
@@ -946,68 +930,68 @@ void handle_encoder(void)
 {
 	switch(curr_enc_var)
 	{
-		case ENC_KB_OPTIONS:
-		{
-			update_encoder(0, 2, &curr_menu_pos, &prev_menu_pos);
-			break;
-		}
+//		case ENC_KB_OPTIONS:
+//		{
+//			update_encoder(0, 2, &curr_menu_pos, &prev_menu_pos);
+//			break;
+//		}
 		case ENC_KB_VAR_OCTAVE:
 		{
 			update_encoder(0, MAX_MIDI_OCTAVES, &kb_vars[KB_VAR_OCTAVE], &prev_kb_vars[KB_VAR_OCTAVE]);
 			break;
 		}
-		case ENC_KB_VAR_VELOCITY:
-		{
-			update_encoder(0, MAX_VELOCITY, &kb_vars[KB_VAR_VELOCITY], &prev_kb_vars[KB_VAR_VELOCITY]);
-			break;
-		}
-		case ENC_SQ_OPTIONS:
-		{
-			update_encoder(0, 3, &curr_menu_pos, &prev_menu_pos);
-			break;
-		}
+//		case ENC_KB_VAR_VELOCITY:
+//		{
+//			update_encoder(0, MAX_VELOCITY, &kb_vars[KB_VAR_VELOCITY], &prev_kb_vars[KB_VAR_VELOCITY]);
+//			break;
+//		}
+//		case ENC_SQ_OPTIONS:
+//		{
+//			update_encoder(0, 3, &curr_menu_pos, &prev_menu_pos);
+//			break;
+//		}
 		case ENC_SQ_VAR_TEMPO:
 		{
 			update_encoder(MIN_BPM, MAX_BPM, &seq_vars[ENC_SQ_VAR_TEMPO], &prev_seq_vars[ENC_SQ_VAR_TEMPO]);
 			break;
 		}
-		case ENC_SQ_VAR_LENGTH:
-		{
-			update_encoder(0, MAX_VELOCITY, &seq_vars[ENC_SQ_VAR_LENGTH], &prev_seq_vars[ENC_SQ_VAR_LENGTH]);
-			break;
-		}
+//		case ENC_SQ_VAR_LENGTH:
+//		{
+//			update_encoder(0, MAX_VELOCITY, &seq_vars[ENC_SQ_VAR_LENGTH], &prev_seq_vars[ENC_SQ_VAR_LENGTH]);
+//			break;
+//		}
 	}
 }
 
-void handle_encoder2(void)
+void handle_encoder_2(void)
 {
 	switch(curr_enc2_var)
 	{
-		case ENC_KB_VAR_OCTAVE:
-		{
-			update_encoder(0, MAX_MIDI_OCTAVES, &kb_vars[KB_VAR_OCTAVE], &prev_kb_vars[KB_VAR_OCTAVE]);
-			break;
-		}
+//		case ENC_KB_VAR_OCTAVE:
+//		{
+//			update_encoder(0, MAX_MIDI_OCTAVES, &kb_vars[KB_VAR_OCTAVE], &prev_kb_vars[KB_VAR_OCTAVE]);
+//			break;
+//		}
 		case ENC_KB_VAR_VELOCITY:
 		{
-			update_encoder(0, MAX_VELOCITY, &kb_vars[KB_VAR_VELOCITY], &prev_kb_vars[KB_VAR_VELOCITY]);
+			update_encoder2(0, MAX_VELOCITY, &kb_vars[KB_VAR_VELOCITY], &prev_kb_vars[KB_VAR_VELOCITY]);
 			break;
 		}
-		case ENC_SQ_VAR_TEMPO:
-		{
-			update_encoder(MIN_BPM, MAX_BPM, &seq_vars[ENC_SQ_VAR_TEMPO], &prev_seq_vars[ENC_SQ_VAR_TEMPO]);
-			break;
-		}
+//		case ENC_SQ_VAR_TEMPO:
+//		{
+//			update_encoder(MIN_BPM, MAX_BPM, &seq_vars[ENC_SQ_VAR_TEMPO], &prev_seq_vars[ENC_SQ_VAR_TEMPO]);
+//			break;
+//		}
 		case ENC_SQ_VAR_LENGTH:
 		{
-			update_encoder(0, MAX_VELOCITY, &seq_vars[ENC_SQ_VAR_LENGTH], &prev_seq_vars[ENC_SQ_VAR_LENGTH]);
+			update_encoder2(0, MAX_VELOCITY, &seq_vars[ENC_SQ_VAR_LENGTH], &prev_seq_vars[ENC_SQ_VAR_LENGTH]);
 			break;
 		}
-		case ENC_SQ_VAR_STEP:
-		{
-			update_encoder(0, N_SEQ_STEPS, &seq_vars[ENC_SQ_VAR_STEP], &prev_seq_vars[ENC_SQ_VAR_STEP]);
-			break;
-		}
+//		case ENC_SQ_VAR_STEP:
+//		{
+//			update_encoder(0, N_SEQ_STEPS, &seq_vars[ENC_SQ_VAR_STEP], &prev_seq_vars[ENC_SQ_VAR_STEP]);
+//			break;
+//		}
 	}
 }
 
