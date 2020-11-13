@@ -67,7 +67,8 @@ typedef enum
 	ENC_SQ_OPTIONS,
 	ENC_SQ_VAR_TEMPO,
 	ENC_SQ_VAR_LENGTH,
-	ENC_SQ_VAR_STEP
+	ENC_SQ_VAR_STEP,
+	ENC_SQ_VAR_NOTE
 }EncoderVar;
 
 /* The variable for the keyboard and sequencer modes are both stored in arrays.
@@ -139,9 +140,9 @@ void handle_encoder_btn_2(void);
 /* Redraw the menu */
 void update_menu(void);
 void draw_keypad_main_screen(void);
-void draw_keypad_options_screen(void);
+//void draw_keypad_options_screen(void);
 void draw_sequencer_main_screen(void);
-void draw_sequencer_options_screen(void);
+//void draw_sequencer_options_screen(void);
 
 void draw_sequencer_step(uint8_t step);
 
@@ -160,8 +161,8 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 #define ENC2_BTN_PORT    GPIOB
 #define ENC2_BTN_PIN     GPIO_PIN_1
 
-#define MODE_SEL_SW_PORT GPIOB
-#define MODE_SEL_SW_PIN  GPIO_PIN_11
+//#define MODE_SEL_SW_PORT GPIOB
+//#define MODE_SEL_SW_PIN  GPIO_PIN_11
 
 #define MAX_MIDI_OCTAVES 10
 #define MAX_MIDI_NOTE    127
@@ -186,6 +187,8 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 #define N_KB_OPTS        3
 #define N_SEQ_OPTS       3
 #define N_SEQ_STEPS      8
+
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
