@@ -71,6 +71,16 @@ typedef enum
 	ENC_SQ_VAR_NOTE
 }EncoderVar;
 
+typedef enum
+{
+
+}Enc1Var;
+
+typedef enum
+{
+
+}Enc2Var;
+
 /* The variable for the keyboard and sequencer modes are both stored in arrays.
  * The two following enums are used for indexing these arrays
  */
@@ -188,6 +198,8 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 #define N_SEQ_OPTS       3
 #define N_SEQ_STEPS      8
 
+#define BUTTON1_HANDLER
+#define BUTTON2_HANDLER
 
 /* USER CODE END Private defines */
 

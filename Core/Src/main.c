@@ -173,7 +173,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
-
 		state_change();
 		handle_encoder();
 		handle_encoder_2();
@@ -610,7 +609,6 @@ void key_down_handler(const char key)
 	HAL_Delay(100); /* Debounce */
 
 	int base_note = kb_vars[KB_VAR_OCTAVE] * NUM_SEMITONES;
-//	int note_val  = key + ((base_note < 127) ? 127 : base_note); // limit upper note to 12
 	int ind       = key % NUM_SEMITONES;
 
 	/* Copy note to string for oled display*/
@@ -627,7 +625,6 @@ void key_down_handler(const char key)
  *******************************/
 
 /* Sequencer timer */
-
 void TIM4_IRQHandler(void)
 {
 	if (TIM4->SR & TIM_SR_UIF)
@@ -802,7 +799,6 @@ void handle_encoder_btn(void)
 		update_menu();
 		enc_btn_isr_flag = false;
 	}
-
 }
 
 //void handle_encoder_btn(void)
@@ -880,14 +876,12 @@ void handle_encoder_btn_2(void)
 				{
 					seq_vars[SQ_VAR_PLAYING] = 1;
 				}
-
 				break;
 			}
 		}
 		update_menu();
 		enc_btn2_isr_flag = false;
 	}
-
 }
 
 long map(long x, long in_min, long in_max, long out_min, long out_max)
