@@ -867,13 +867,19 @@ void handle_encoder_btn_2(void)
 			}
 			case MODE_SEQUENCER:
 			{
+				curr_enc_var = ENC_SQ_VAR_TEMPO;
+				curr_enc2_var = ENC_SQ_VAR_LENGTH;
 				/* If in sequencer mode encoder 2 button toggles play state*/
 				if(seq_vars[SQ_VAR_PLAYING])
 				{
 					seq_vars[SQ_VAR_PLAYING] = 0;
+//					curr_enc_var = ENC_SQ_VAR_STEP;
+//					curr_enc2_var = ENC_SQ_VAR_NOTE;
 				}
 				else
 				{
+//					curr_enc_var = ENC_SQ_VAR_TEMPO;
+//					curr_enc2_var = ENC_SQ_VAR_LENGTH;
 					seq_vars[SQ_VAR_PLAYING] = 1;
 				}
 				break;
@@ -966,7 +972,12 @@ void handle_encoder(void)
 //		}
 		case ENC_SQ_VAR_TEMPO:
 		{
-			update_encoder(MIN_BPM, MAX_BPM, &seq_vars[ENC_SQ_VAR_TEMPO], &prev_seq_vars[ENC_SQ_VAR_TEMPO]);
+			update_encoder(MIN_BPM, MAX_BPM, &seq_vars[SQ_VAR_BPM], &prev_seq_vars[SQ_VAR_BPM]);
+			break;
+		}
+		case ENC_SQ_VAR_STEP:
+		{
+			update_encoder(0, N_SEQ_STEPS, &seq_vars[SQ_VAR_STEP], &prev_seq_vars[SQ_VAR_STEP]);
 			break;
 		}
 //		case ENC_SQ_VAR_LENGTH:
@@ -998,19 +1009,15 @@ void handle_encoder_2(void)
 //		}
 		case ENC_SQ_VAR_LENGTH:
 		{
-			update_encoder2(0, MAX_VELOCITY, &seq_vars[ENC_SQ_VAR_LENGTH], &prev_seq_vars[ENC_SQ_VAR_LENGTH]);
+			update_encoder2(0, MAX_VELOCITY, &seq_vars[SQ_VAR_LENGTH], &prev_seq_vars[SQ_VAR_LENGTH]);
 			break;
 		}
 		case ENC_SQ_VAR_NOTE:
 		{
-			update_encoder2(0, MAX_MIDI_NOTE, &sequence[ENC_SQ_VAR_STEP], &prev_seq[ENC_SQ_VAR_STEP]);
+			update_encoder2(0, MAX_MIDI_NOTE, &sequence[SQ_VAR_STEP], &prev_seq[SQ_VAR_STEP]);
 			break;
 		}
-//		case ENC_SQ_VAR_STEP:
-//		{
-//			update_encoder(0, N_SEQ_STEPS, &seq_vars[ENC_SQ_VAR_STEP], &prev_seq_vars[ENC_SQ_VAR_STEP]);
-//			break;
-//		}
+
 	}
 }
 

@@ -71,15 +71,15 @@ typedef enum
 	ENC_SQ_VAR_NOTE
 }EncoderVar;
 
-typedef enum
-{
-
-}Enc1Var;
-
-typedef enum
-{
-
-}Enc2Var;
+//typedef enum
+//{
+//
+//}Enc1Var;
+//
+//typedef enum
+//{
+//
+//}Enc2Var;
 
 /* The variable for the keyboard and sequencer modes are both stored in arrays.
  * The two following enums are used for indexing these arrays
