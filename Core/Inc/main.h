@@ -67,8 +67,19 @@ typedef enum
 	ENC_SQ_OPTIONS,
 	ENC_SQ_VAR_TEMPO,
 	ENC_SQ_VAR_LENGTH,
-	ENC_VAR_NOTHING
+	ENC_SQ_VAR_STEP,
+	ENC_SQ_VAR_NOTE
 }EncoderVar;
+
+//typedef enum
+//{
+//
+//}Enc1Var;
+//
+//typedef enum
+//{
+//
+//}Enc2Var;
 
 /* The variable for the keyboard and sequencer modes are both stored in arrays.
  * The two following enums are used for indexing these arrays
@@ -128,18 +139,20 @@ void encoder_button_it_init(void);
 
 /* Handles the mapping of what value the encoder is controlling */
 void handle_encoder(void);
-
+void handle_encoder_2(void);
 /* Updates a variable from the timer count value
  * and wraps values around at the limits */
 void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val);
+void update_encoder2(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val);
 void handle_encoder_btn(void);
+void handle_encoder_btn_2(void);
 
 /* Redraw the menu */
 void update_menu(void);
 void draw_keypad_main_screen(void);
-void draw_keypad_options_screen(void);
+//void draw_keypad_options_screen(void);
 void draw_sequencer_main_screen(void);
-void draw_sequencer_options_screen(void);
+//void draw_sequencer_options_screen(void);
 
 void draw_sequencer_step(uint8_t step);
 
@@ -155,8 +168,11 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 #define ENC_BTN_PORT     GPIOC
 #define ENC_BTN_PIN      GPIO_PIN_14
 
-#define MODE_SEL_SW_PORT GPIOB
-#define MODE_SEL_SW_PIN  GPIO_PIN_11
+#define ENC2_BTN_PORT    GPIOB
+#define ENC2_BTN_PIN     GPIO_PIN_1
+
+//#define MODE_SEL_SW_PORT GPIOB
+//#define MODE_SEL_SW_PIN  GPIO_PIN_11
 
 #define MAX_MIDI_OCTAVES 10
 #define MAX_MIDI_NOTE    127
@@ -181,6 +197,10 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 #define N_KB_OPTS        3
 #define N_SEQ_OPTS       3
 #define N_SEQ_STEPS      8
+
+#define BUTTON1_HANDLER
+#define BUTTON2_HANDLER
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

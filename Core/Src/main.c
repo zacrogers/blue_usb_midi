@@ -82,25 +82,26 @@ static void MX_I2C1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 Keypad  keypad = {.rows_port   = GPIOA,
-		          .row_pins[0] = GPIO_PIN_7,
-				  .row_pins[1] = GPIO_PIN_6,
-				  .row_pins[2] = GPIO_PIN_5,
-				  .row_pins[3] = GPIO_PIN_4,
-				  .cols_port   = GPIOA,
-				  .col_pins[0] = GPIO_PIN_3,
-				  .col_pins[1] = GPIO_PIN_2,
-				  .col_pins[2] = GPIO_PIN_8,
-				  .col_pins[3] = GPIO_PIN_9}; /* PA0 and PA1 need to be used for encoder */
+		          .row_pins[0] = GPIO_PIN_5,
+				  .row_pins[1] = GPIO_PIN_4,
+				  .row_pins[2] = GPIO_PIN_3,
+				  .row_pins[3] = GPIO_PIN_2,
+				  .cols_port   = GPIOB,
+				  .col_pins[0] = GPIO_PIN_12,
+				  .col_pins[1] = GPIO_PIN_13,
+				  .col_pins[2] = GPIO_PIN_14,
+				  .col_pins[3] = GPIO_PIN_15}; /* PA0 and PA1 need to be used for encoder */
 
-ShiftRegister shift_reg = {.port      = GPIOB,
-		                   .data_pin  = GPIO_PIN_0,
-		                   .latch_pin = GPIO_PIN_1,
-		                   .clock_pin = GPIO_PIN_10};
+//ShiftRegister shift_reg = {.port      = GPIOB,
+//		                   .data_pin  = GPIO_PIN_0,
+//		                   .latch_pin = GPIO_PIN_1,
+//		                   .clock_pin = GPIO_PIN_10};
 
 /* Variables relevant to the menu system */
 Mode       curr_mode         = MODE_KEYPAD;
 Screen     screen            = SC_MAIN;
 EncoderVar curr_enc_var      = ENC_KB_OPTIONS;
+EncoderVar curr_enc2_var     = ENC_KB_OPTIONS;
 
 bool       updating_menu_var = false;
 uint8_t    prev_menu_pos     = 0;
@@ -120,13 +121,15 @@ uint8_t    seq_vars[SQ_VAR_N]      = {120, 50, 1, 0}; /* BPM, length, playing, s
 uint8_t    prev_seq_vars[SQ_VAR_N] = {0};
 
 uint8_t    sequence[8]  = {69, 71, 72, 74, 76, 77, 79, 80};
+uint8_t    prev_seq[8] = {0};
 
 /* Flags for interrupt routines */
 volatile bool enc_btn_isr_flag = false;
-volatile bool enc_btnlong_press = false;
-volatile int enc_btn_long_press_cnt = 0;
+volatile bool enc_btn2_isr_flag = false;
 volatile bool seq_tim_isr_flag = false;
 
+volatile bool enc_btnlong_press = false;
+volatile int enc_btn_long_press_cnt = 0;
 /* USER CODE END 0 */
 
 /**
@@ -172,6 +175,7 @@ int main(void)
 	{
 		state_change();
 		handle_encoder();
+		handle_encoder_2();
 
 		switch(curr_mode)
 		{
@@ -303,10 +307,10 @@ void gpio_init(void)
 	HAL_GPIO_Init(OB_LED_PORT, &GPIO_InitStruct);
 
 	/* Init mode select input pin */
-	GPIO_InitStruct.Pin = MODE_SEL_SW_PIN;
-	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	HAL_GPIO_Init(MODE_SEL_SW_PORT, &GPIO_InitStruct);
+//	GPIO_InitStruct.Pin = MODE_SEL_SW_PIN;
+//	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+//	GPIO_InitStruct.Pull = GPIO_NOPULL;
+//	HAL_GPIO_Init(MODE_SEL_SW_PORT, &GPIO_InitStruct);
 }
 
 void init_peripherals(void)
@@ -336,10 +340,13 @@ void init_peripherals(void)
 	/* Init rotary encoder*/
 	encoder_timer_init();
 	encoder_button_it_init();
+	/*
+	 * Need to write initialisers for  second encoder
+	 */
 
 	/* Init shift register */
-	shift_reg_init(&shift_reg);
-	shift_reg_set(&shift_reg, 0);
+//	shift_reg_init(&shift_reg);
+//	shift_reg_set(&shift_reg, 0);
 }
 
 
@@ -352,36 +359,13 @@ void update_menu(void)
 	{
 		case MODE_KEYPAD:
 		{
-			if(screen == SC_MAIN)
-			{
-				draw_keypad_main_screen();
-
-			}
-			else if(screen == SC_OPTIONS)
-			{
-				draw_keypad_options_screen();
-			}
+			draw_keypad_main_screen();
 			break;
 		}
 
 		case MODE_SEQUENCER:
 		{
-			if(screen == SC_MAIN)
-			{
-				draw_sequencer_main_screen();
-			}
-			else if(screen == SC_OPTIONS)
-			{
-
-				if(curr_menu_pos <= N_KB_OPTS)
-				{
-
-				}
-				else
-				{
-
-				}
-			}
+			draw_sequencer_main_screen();
 			break;
 		}
 	}
@@ -410,106 +394,52 @@ void draw_keypad_main_screen(void)
 
 	ssd1306_UpdateScreen();
 }
-#ifdef NEW_OPTIONS_SCREEN
 
-void draw_keypad_options_screen(void)
-{
-
-	ssd1306_Fill(Black); /* Clear screen*/
-
-	/* Draw page title header */
-//	ssd1306_DrawRect(0, 0, 16, 128, White);
-	for (int i = 0; i < 16; i++)
-	{
-		for (int j = 0; j < 128; j++)
-		{
-			ssd1306_DrawPixel(j, i, White);
-		}
-	}
-
-	ssd1306_SetCursor(0, OLED_ROW_1);
-	ssd1306_WriteString((char *)mode_labels[MODE_KEYPAD], Font_11x18, Black);
-
-	ssd1306_SetCursor(0, OLED_ROW_2);
-
+//void draw_keypad_options_screen(void)
+//{
+//
+//	ssd1306_Fill(Black); /* Clear screen*/
+//
+//	/* Draw page title header */
+////	ssd1306_DrawRect(0, 0, 16, 128, White);
+//	for (int i = 0; i < 16; i++)
+//	{
+//		for (int j = 0; j < 128; j++)
+//		{
+//			ssd1306_DrawPixel(j, i, White);
+//		}
+//	}
+//
+//	ssd1306_SetCursor(0, OLED_ROW_1);
+//	ssd1306_WriteString((char *)mode_labels[MODE_KEYPAD], Font_11x18, Black);
+//
+//	ssd1306_SetCursor(0, OLED_ROW_2);
+//
 //	/* Change selected index icon if editing value */
 //	if(updating_menu_var)
 //		ssd1306_WriteString("+", Font_11x18, White);
 //	else
 //		ssd1306_WriteString("-", Font_11x18, White);
-
-	if(curr_menu_pos < N_KB_OPTS)
-	{
-		if(curr_menu_pos < prev_menu_pos)
-		ssd1306_SetCursor(0, row_offsets[curr_menu_pos+1]);
-		ssd1306_WriteString("-", Font_11x18, White);
-		ssd1306_SetCursor(11, OLED_ROW_2);
-		ssd1306_WriteString((char *)kb_labels[curr_menu_pos], Font_11x18, White);
-
-		itoa(kb_vars[curr_menu_pos], value_label, 10);
-
-		ssd1306_SetCursor(77, OLED_ROW_2);
-		ssd1306_WriteString((char *)value_label, Font_11x18, White);
-	}
-//	else if(curr_menu_pos == N_KB_OPTS)
+//
+//	if(curr_menu_pos < N_KB_OPTS)
 //	{
 //		ssd1306_SetCursor(11, OLED_ROW_2);
-//		ssd1306_WriteString((char *)back_label, Font_11x18, White);
+//		ssd1306_WriteString((char *)kb_labels[curr_menu_pos], Font_11x18, White);
+//
+//		itoa(kb_vars[curr_menu_pos], value_label, 10);
+//
+//		ssd1306_SetCursor(77, OLED_ROW_2);
+//		ssd1306_WriteString((char *)value_label, Font_11x18, White);
 //	}
+//	else if(curr_menu_pos == N_KB_OPTS-1)
+//	{
+//		ssd1306_SetCursor(11, OLED_ROW_2);
+//		ssd1306_WriteString((char *)kb_labels[N_KB_OPTS-1], Font_11x18, White);
+//	}
+//
+//	ssd1306_UpdateScreen();
+//}
 
-//	ssd1306_SetCursor(0, OLED_ROW_3);
-//	ssd1306_WriteString("---------", Font_11x18, White);
-
-	ssd1306_UpdateScreen();
-}
-
-
-#else
-void draw_keypad_options_screen(void)
-{
-
-	ssd1306_Fill(Black); /* Clear screen*/
-
-	/* Draw page title header */
-//	ssd1306_DrawRect(0, 0, 16, 128, White);
-	for (int i = 0; i < 16; i++)
-	{
-		for (int j = 0; j < 128; j++)
-		{
-			ssd1306_DrawPixel(j, i, White);
-		}
-	}
-
-	ssd1306_SetCursor(0, OLED_ROW_1);
-	ssd1306_WriteString((char *)mode_labels[MODE_KEYPAD], Font_11x18, Black);
-
-	ssd1306_SetCursor(0, OLED_ROW_2);
-
-	/* Change selected index icon if editing value */
-	if(updating_menu_var)
-		ssd1306_WriteString("+", Font_11x18, White);
-	else
-		ssd1306_WriteString("-", Font_11x18, White);
-
-	if(curr_menu_pos < N_KB_OPTS)
-	{
-		ssd1306_SetCursor(11, OLED_ROW_2);
-		ssd1306_WriteString((char *)kb_labels[curr_menu_pos], Font_11x18, White);
-
-		itoa(kb_vars[curr_menu_pos], value_label, 10);
-
-		ssd1306_SetCursor(77, OLED_ROW_2);
-		ssd1306_WriteString((char *)value_label, Font_11x18, White);
-	}
-	else if(curr_menu_pos == N_KB_OPTS-1)
-	{
-		ssd1306_SetCursor(11, OLED_ROW_2);
-		ssd1306_WriteString((char *)kb_labels[N_KB_OPTS-1], Font_11x18, White);
-	}
-
-	ssd1306_UpdateScreen();
-}
-#endif
 
 /* Draw the rectangle representing current step */
 void draw_sequencer_step(uint8_t step)
@@ -595,7 +525,7 @@ void draw_sequencer_main_screen(void)
 	/* Draw vertical lines */
 	for(int line = 0; line < 17; ++line)
 	{
-		for (int i = 0; i < 16; i++){ssd1306_DrawPixel( line*16, i + SEQ_FR_TOP, White);}
+		for (int i = 0; i < 16; i++){ssd1306_DrawPixel(line*16, i + SEQ_FR_TOP, White);}
 	}
 
 	/* Draw final vertical line */
@@ -612,15 +542,24 @@ void draw_sequencer_main_screen(void)
  *****************************/
 void state_change(void)
 {
-	if(HAL_GPIO_ReadPin(MODE_SEL_SW_PORT, MODE_SEL_SW_PIN) == 1)
+	if(enc_btn2_isr_flag)
 	{
-		curr_mode = MODE_KEYPAD;
+		if(curr_mode == MODE_KEYPAD)
+		{
+			curr_enc_var = SQ_VAR_BPM;
+			curr_enc2_var = SQ_VAR_LENGTH;
+			seq_vars[SQ_VAR_PLAYING] = 1;
+			curr_mode = MODE_SEQUENCER;
+		}
+		else if(curr_mode == MODE_SEQUENCER)
+		{
+			curr_enc_var = ENC_KB_VAR_OCTAVE;
+			curr_enc2_var = ENC_KB_VAR_VELOCITY;
+			seq_vars[SQ_VAR_PLAYING] = 0;
+			curr_mode = MODE_KEYPAD;
+		}
 		update_menu();
-	}
-	else
-	{
-		curr_mode = MODE_SEQUENCER;
-		update_menu();
+		enc_btn2_isr_flag = false;
 	}
 }
 
@@ -646,6 +585,7 @@ void state_sequencer(void)
 			}
 
 			int ind = sequence[seq_vars[SQ_VAR_STEP]] % NUM_SEMITONES;
+			midi_note_on(midi_channel, sequence[seq_vars[SQ_VAR_STEP]], kb_vars[KB_VAR_VELOCITY]);
 
 			/* Copy note to string for oled display*/
 			strcpy(note_disp, note_to_string[ind]);
@@ -653,13 +593,6 @@ void state_sequencer(void)
 			seq_tim_isr_flag = false;
 		}
 	}
-//	for(int i = 0; i < 8; ++i)
-//	{
-//		midi_note_on(midi_channel, sequence[i], 127);
-//		HAL_Delay(1000);
-//		midi_note_off(midi_channel, sequence[i], 127);
-//		HAL_Delay(1000);
-//	}
 }
 
 
@@ -676,7 +609,6 @@ void key_down_handler(const char key)
 	HAL_Delay(100); /* Debounce */
 
 	int base_note = kb_vars[KB_VAR_OCTAVE] * NUM_SEMITONES;
-//	int note_val  = key + ((base_note < 127) ? 127 : base_note); // limit upper note to 12
 	int ind       = key % NUM_SEMITONES;
 
 	/* Copy note to string for oled display*/
@@ -693,65 +625,49 @@ void key_down_handler(const char key)
  *******************************/
 
 /* Sequencer timer */
-void TIM3_IRQHandler(void)
+void TIM4_IRQHandler(void)
 {
-	if (TIM3->SR & TIM_SR_UIF)
+	if (TIM4->SR & TIM_SR_UIF)
 	{
 		seq_tim_isr_flag = true;
-
-		HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
-
-		TIM3->CNT = 0;
-		TIM3->SR &= ~(TIM_SR_UIF);
+		TIM4->CNT = 0;
+		TIM4->SR &= ~(TIM_SR_UIF);
 	}
 }
 
 /* APB1 clock 48MHz*/
 void sequencer_timer_init(void)
 {
-//	RCC->APB1RSTR |=  (RCC_APB1RSTR_TIM3RST);
-	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
 
-	TIM3->CR1 &= ~(TIM_CR1_CEN);
+	TIM4->CR1 &= ~(TIM_CR1_CEN);
 
-	TIM3->CNT  = 0;
-	TIM3->PSC = 48000;
-	TIM3->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
+	TIM4->CNT = 0;
+	TIM4->PSC = 48000;
+	TIM4->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
 	// Send an update event to reset the timer and apply settings.
 
 	// Enable the hardware interrupt.
-	TIM3->DIER |= TIM_DIER_UIE;
+	TIM4->DIER |= TIM_DIER_UIE;
 
-	NVIC_EnableIRQ(TIM3_IRQn);
-	NVIC_SetPriority(TIM3_IRQn, 3);
-	TIM3->CR1 |= TIM_CR1_CEN; /* Enable timer */
+	NVIC_EnableIRQ(TIM4_IRQn);
+	NVIC_SetPriority(TIM4_IRQn, 3);
+	TIM4->CR1 |= TIM_CR1_CEN; /* Enable timer */
 }
 
 void sequencer_timer_start(void)
 {
-//	TIM3->EGR  |= TIM_EGR_UG;
+//	TIM4->EGR  |= TIM_EGR_UG;
 	sequencer_timer_init();
-//	TIM3->CNT = 0;
-//	TIM3->DIER |= TIM_DIER_UIE;
-//	NVIC_EnableIRQ(TIM3_IRQn);
-//	TIM3->CR1 |= TIM_CR1_CEN; /* Enable timer */
+//	TIM4->CNT = 0;
+//	TIM4->DIER |= TIM_DIER_UIE;
+//	NVIC_EnableIRQ(TIM4_IRQn);
+//	TIM4->CR1 |= TIM_CR1_CEN; /* Enable timer */
 }
 
 void sequencer_timer_stop(void)
 {
-	TIM3->CR1 &= ~(TIM_CR1_CEN);
-//	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
-//
-//	TIM3->EGR  |= TIM_EGR_UG;
-//	TIM3->DIER &= ~TIM_DIER_UIE;
-//
-//	TIM3->SR &= ~(TIM_SR_UIF);
-//	TIM3->CNT = 0;
-//	NVIC_ClearPendingIRQ(TIM3_IRQn);
-//	NVIC_DisableIRQ(TIM3_IRQn);
-//	TIM3->CR1 &= ~TIM_CR1_CEN; /* Disable timer */
-//	TIM3->DIER &= !TIM_DIER_UIE;
-//	TIM3->CNT = 0;
+	TIM4->CR1 &= ~(TIM_CR1_CEN);
 }
 
 void sequencer_update_bpm(void)
@@ -759,9 +675,9 @@ void sequencer_update_bpm(void)
 //	TIM3->CR1 &= ~TIM_CR1_CEN; /* Disable timer */
 //	TIM3->CNT = 0;
 	sequencer_timer_stop();
-	TIM3->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
+	TIM4->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
 	sequencer_timer_start();
-	TIM3->CR1 |= TIM_CR1_CEN; /* Enable timer */
+	TIM4->CR1 |= TIM_CR1_CEN; /* Enable timer */
 }
 
 
@@ -774,34 +690,49 @@ void encoder_timer_init(void)
 	RCC->APB2ENR |= RCC_APB2ENR_AFIOEN | RCC_APB2ENR_IOPBEN;
 	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
 
+	/* Setup encoder timer 1 */
 	TIM2->ARR = 0xFFFF;
 	TIM2->CCMR1 |= (TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0 );  /* Map chans to timer inputs */
 	TIM2->CCER &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P);         /* Trigger on rising edge */
 	TIM2->SMCR |= TIM_SMCR_SMS_0;                           /* Set encoder mode */
 	TIM2->CR1 |= TIM_CR1_CEN ;                              /* Enable timer */
+
+	/* Enable clocks */
+	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+
+	/* Setup encoder timer 2 */
+	TIM3->ARR = 0xFFFF;
+	TIM3->CCMR1 |= (TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0 );  /* Map chans to timer inputs */
+	TIM3->CCER &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P);         /* Trigger on rising edge */
+	TIM3->SMCR |= TIM_SMCR_SMS_0;                           /* Set encoder mode */
+	TIM3->CR1 |= TIM_CR1_CEN ;                              /* Enable timer */
 }
 
 
-/* For handling encoder button */
+/* For handling encoder 1 button */
 void EXTI15_10_IRQHandler(void)
 {
 	if(EXTI->PR & EXTI_PR_PR14)
 	{
-//		while(HAL_GPIO_ReadPin(ENC_BTN_PORT, ENC_BTN_PIN))
-//		{
-//			if(++enc_btn_long_press_cnt >= 0xff)
-//			{
-//				HAL_GPIO_TogglePin(ENC_BTN_PORT, ENC_BTN_PIN);
-//			}
-//		}
 		enc_btn_isr_flag = true;
 		handle_encoder_btn();
 		EXTI->PR |= EXTI_PR_PR14;
 	}
 }
 
+/* For handling encoder 2 button */
+void EXTI1_IRQHandler(void)
+{
+	if(EXTI->PR & EXTI_PR_PR1)
+	{
+		enc_btn2_isr_flag = true;
+		EXTI->PR |= EXTI_PR_PR1;
+	}
+}
+
 void encoder_button_it_init(void)
 {
+	/* Init button 1*/
 	RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
 
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -818,7 +749,24 @@ void encoder_button_it_init(void)
 
 	NVIC_EnableIRQ(EXTI15_10_IRQn);
 	NVIC_SetPriority(EXTI15_10_IRQn, 0);
+
+	/* Init button 2*/
+	RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
+
+	GPIO_InitStruct.Pin = ENC2_BTN_PIN;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(ENC2_BTN_PORT, &GPIO_InitStruct);
+
+	AFIO->EXTICR[0] |= AFIO_EXTICR1_EXTI1_PB;
+
+	EXTI->IMR |= EXTI_IMR_MR1;
+	EXTI->RTSR |= EXTI_RTSR_TR1;
+
+	NVIC_EnableIRQ(EXTI1_IRQn);
+	NVIC_SetPriority(EXTI1_IRQn, 0);
 }
+
 
 void handle_encoder_btn(void)
 {
@@ -828,49 +776,117 @@ void handle_encoder_btn(void)
 		{
 			case MODE_KEYPAD:
 			{
-				if(screen == SC_OPTIONS)
-				{
-					if(!updating_menu_var)
-					{
-						if(curr_menu_pos == KB_VAR_OCTAVE)
-						{
-							curr_enc_var = ENC_KB_VAR_OCTAVE;
-							updating_menu_var = true;
-						}
-						else if(curr_menu_pos == KB_VAR_VELOCITY)
-						{
-							curr_enc_var = ENC_KB_VAR_VELOCITY;
-							updating_menu_var = true;
-						}
-						else if(curr_menu_pos == 2)
-						{
-							sequencer_timer_start();
-							screen = SC_MAIN;
-							curr_enc_var = ENC_VAR_NOTHING;
-							updating_menu_var = false;
-						}
-					}
-					else
-					{
-						sequencer_timer_stop();
-						curr_enc_var = ENC_KB_OPTIONS;
-						updating_menu_var = false;
-					}
-				}
-				else if(screen == SC_MAIN)
-				{
-					curr_enc_var = ENC_KB_OPTIONS;
-					screen = SC_OPTIONS;
-				}
 				break;
 			}
 			case MODE_SEQUENCER:
 			{
+				if(seq_vars[SQ_VAR_PLAYING])
+				{
+					seq_vars[SQ_VAR_PLAYING] = 0;
+					curr_enc_var = ENC_SQ_VAR_STEP;
+					curr_enc2_var = ENC_SQ_VAR_NOTE;
+				}
+				else
+				{
+					seq_vars[SQ_VAR_STEP] = 0;
+					seq_vars[SQ_VAR_PLAYING] = 1;
+					curr_enc_var = ENC_SQ_VAR_TEMPO;
+					curr_enc2_var = ENC_SQ_VAR_LENGTH;
+				}
 				break;
 			}
 		}
 		update_menu();
 		enc_btn_isr_flag = false;
+	}
+}
+
+//void handle_encoder_btn(void)
+//{
+//	if(enc_btn_isr_flag)
+//	{
+//		switch(curr_mode)
+//		{
+//			case MODE_KEYPAD:
+//			{
+//				if(screen == SC_OPTIONS)
+//				{
+//					if(!updating_menu_var)
+//					{
+//						if(curr_menu_pos == KB_VAR_OCTAVE)
+//						{
+//							curr_enc_var = ENC_KB_VAR_OCTAVE;
+//							updating_menu_var = true;
+//						}
+//						else if(curr_menu_pos == KB_VAR_VELOCITY)
+//						{
+//							curr_enc_var = ENC_KB_VAR_VELOCITY;
+//							updating_menu_var = true;
+//						}
+//						else if(curr_menu_pos == 2)
+//						{
+//							sequencer_timer_start();
+//							screen = SC_MAIN;
+//							updating_menu_var = false;
+//						}
+//					}
+//					else
+//					{
+//						sequencer_timer_stop();
+//						curr_enc_var = ENC_KB_OPTIONS;
+//						updating_menu_var = false;
+//					}
+//				}
+//				else if(screen == SC_MAIN)
+//				{
+//					curr_enc_var = ENC_KB_OPTIONS;
+//					screen = SC_OPTIONS;
+//				}
+//				break;
+//			}
+//			case MODE_SEQUENCER:
+//			{
+//				break;
+//			}
+//		}
+//		update_menu();
+//		enc_btn_isr_flag = false;
+//	}
+//}
+
+void handle_encoder_btn_2(void)
+{
+	if(enc_btn2_isr_flag)
+	{
+		switch(curr_mode)
+		{
+			case MODE_KEYPAD:
+			{
+				curr_enc2_var = ENC_KB_VAR_VELOCITY;
+				break;
+			}
+			case MODE_SEQUENCER:
+			{
+				curr_enc_var = ENC_SQ_VAR_TEMPO;
+				curr_enc2_var = ENC_SQ_VAR_LENGTH;
+				/* If in sequencer mode encoder 2 button toggles play state*/
+				if(seq_vars[SQ_VAR_PLAYING])
+				{
+					seq_vars[SQ_VAR_PLAYING] = 0;
+//					curr_enc_var = ENC_SQ_VAR_STEP;
+//					curr_enc2_var = ENC_SQ_VAR_NOTE;
+				}
+				else
+				{
+//					curr_enc_var = ENC_SQ_VAR_TEMPO;
+//					curr_enc2_var = ENC_SQ_VAR_LENGTH;
+					seq_vars[SQ_VAR_PLAYING] = 1;
+				}
+				break;
+			}
+		}
+		update_menu();
+		enc_btn2_isr_flag = false;
 	}
 }
 
@@ -887,7 +903,6 @@ void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_v
 	if(*prev_val != *curr_val)
 	{
 		update_menu();
-		shift_reg_set_bar(&shift_reg, map(*curr_val, min, max, 0, 7));
 	}
 
 	/* Check bounds and wrap if necessary*/
@@ -905,44 +920,104 @@ void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_v
 	*prev_val = *curr_val;
 }
 
+void update_encoder2(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val)
+{
+	/* Increments twice per click so divide by 2*/
+	*curr_val = TIM3->CNT/2;
+
+	if(*prev_val != *curr_val)
+	{
+		update_menu();
+	}
+
+	/* Check bounds and wrap if necessary*/
+	if(*curr_val == 0xff && *prev_val == min)
+	{
+		TIM3->CNT = 0;
+		*curr_val = 0;
+	}
+	else if(*curr_val > max)
+	{
+		TIM3->CNT = min;
+		*curr_val = min;
+	}
+
+	*prev_val = *curr_val;
+}
+
+
 void handle_encoder(void)
 {
 	switch(curr_enc_var)
 	{
-		case ENC_KB_OPTIONS:
-		{
-			update_encoder(0, 2, &curr_menu_pos, &prev_menu_pos);
-			break;
-		}
+//		case ENC_KB_OPTIONS:
+//		{
+//			update_encoder(0, 2, &curr_menu_pos, &prev_menu_pos);
+//			break;
+//		}
 		case ENC_KB_VAR_OCTAVE:
 		{
 			update_encoder(0, MAX_MIDI_OCTAVES, &kb_vars[KB_VAR_OCTAVE], &prev_kb_vars[KB_VAR_OCTAVE]);
 			break;
 		}
-		case ENC_KB_VAR_VELOCITY:
-		{
-			update_encoder(0, MAX_VELOCITY, &kb_vars[KB_VAR_VELOCITY], &prev_kb_vars[KB_VAR_VELOCITY]);
-			break;
-		}
-		case ENC_SQ_OPTIONS:
-		{
-			update_encoder(0, 3, &curr_menu_pos, &prev_menu_pos);
-			break;
-		}
+//		case ENC_KB_VAR_VELOCITY:
+//		{
+//			update_encoder(0, MAX_VELOCITY, &kb_vars[KB_VAR_VELOCITY], &prev_kb_vars[KB_VAR_VELOCITY]);
+//			break;
+//		}
+//		case ENC_SQ_OPTIONS:
+//		{
+//			update_encoder(0, 3, &curr_menu_pos, &prev_menu_pos);
+//			break;
+//		}
 		case ENC_SQ_VAR_TEMPO:
 		{
-			update_encoder(MIN_BPM, MAX_BPM, &seq_vars[ENC_SQ_VAR_TEMPO], &prev_seq_vars[ENC_SQ_VAR_TEMPO]);
+			update_encoder(MIN_BPM, MAX_BPM, &seq_vars[SQ_VAR_BPM], &prev_seq_vars[SQ_VAR_BPM]);
 			break;
 		}
+		case ENC_SQ_VAR_STEP:
+		{
+			update_encoder(0, N_SEQ_STEPS, &seq_vars[SQ_VAR_STEP], &prev_seq_vars[SQ_VAR_STEP]);
+			break;
+		}
+//		case ENC_SQ_VAR_LENGTH:
+//		{
+//			update_encoder(0, MAX_VELOCITY, &seq_vars[ENC_SQ_VAR_LENGTH], &prev_seq_vars[ENC_SQ_VAR_LENGTH]);
+//			break;
+//		}
+	}
+}
+
+void handle_encoder_2(void)
+{
+	switch(curr_enc2_var)
+	{
+//		case ENC_KB_VAR_OCTAVE:
+//		{
+//			update_encoder(0, MAX_MIDI_OCTAVES, &kb_vars[KB_VAR_OCTAVE], &prev_kb_vars[KB_VAR_OCTAVE]);
+//			break;
+//		}
+		case ENC_KB_VAR_VELOCITY:
+		{
+			update_encoder2(0, MAX_VELOCITY, &kb_vars[KB_VAR_VELOCITY], &prev_kb_vars[KB_VAR_VELOCITY]);
+			break;
+		}
+//		case ENC_SQ_VAR_TEMPO:
+//		{
+//			update_encoder(MIN_BPM, MAX_BPM, &seq_vars[ENC_SQ_VAR_TEMPO], &prev_seq_vars[ENC_SQ_VAR_TEMPO]);
+//			break;
+//		}
 		case ENC_SQ_VAR_LENGTH:
 		{
-			update_encoder(0, MAX_VELOCITY, &seq_vars[ENC_SQ_VAR_LENGTH], &prev_seq_vars[ENC_SQ_VAR_LENGTH]);
+			update_encoder2(0, MAX_VELOCITY, &seq_vars[SQ_VAR_LENGTH], &prev_seq_vars[SQ_VAR_LENGTH]);
 			break;
 		}
-		case ENC_VAR_NOTHING:
+		case ENC_SQ_VAR_NOTE:
 		{
+			update_encoder2(0, MAX_MIDI_NOTE, &sequence[SQ_VAR_STEP], &prev_seq[SQ_VAR_STEP]);
 			break;
 		}
+
 	}
 }
 
