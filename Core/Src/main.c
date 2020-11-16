@@ -767,7 +767,7 @@ void encoder_button_it_init(void)
 	NVIC_SetPriority(EXTI1_IRQn, 0);
 }
 
-
+/* This button is used for toggling modes*/
 void handle_encoder_btn(void)
 {
 	if(enc_btn_isr_flag)
@@ -801,59 +801,8 @@ void handle_encoder_btn(void)
 	}
 }
 
-//void handle_encoder_btn(void)
-//{
-//	if(enc_btn_isr_flag)
-//	{
-//		switch(curr_mode)
-//		{
-//			case MODE_KEYPAD:
-//			{
-//				if(screen == SC_OPTIONS)
-//				{
-//					if(!updating_menu_var)
-//					{
-//						if(curr_menu_pos == KB_VAR_OCTAVE)
-//						{
-//							curr_enc_var = ENC_KB_VAR_OCTAVE;
-//							updating_menu_var = true;
-//						}
-//						else if(curr_menu_pos == KB_VAR_VELOCITY)
-//						{
-//							curr_enc_var = ENC_KB_VAR_VELOCITY;
-//							updating_menu_var = true;
-//						}
-//						else if(curr_menu_pos == 2)
-//						{
-//							sequencer_timer_start();
-//							screen = SC_MAIN;
-//							updating_menu_var = false;
-//						}
-//					}
-//					else
-//					{
-//						sequencer_timer_stop();
-//						curr_enc_var = ENC_KB_OPTIONS;
-//						updating_menu_var = false;
-//					}
-//				}
-//				else if(screen == SC_MAIN)
-//				{
-//					curr_enc_var = ENC_KB_OPTIONS;
-//					screen = SC_OPTIONS;
-//				}
-//				break;
-//			}
-//			case MODE_SEQUENCER:
-//			{
-//				break;
-//			}
-//		}
-//		update_menu();
-//		enc_btn_isr_flag = false;
-//	}
-//}
 
+/* This button is used to toggle play/stop in sequencer mode */
 void handle_encoder_btn_2(void)
 {
 	if(enc_btn2_isr_flag)
@@ -862,7 +811,6 @@ void handle_encoder_btn_2(void)
 		{
 			case MODE_KEYPAD:
 			{
-				curr_enc2_var = ENC_KB_VAR_VELOCITY;
 				break;
 			}
 			case MODE_SEQUENCER:
