@@ -174,7 +174,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
-		//state_change();
 		handle_encoder_btn();
 		handle_encoder_btn_2();
 		handle_encoder();
@@ -398,51 +397,6 @@ void draw_keypad_main_screen(void)
 	ssd1306_UpdateScreen();
 }
 
-//void draw_keypad_options_screen(void)
-//{
-//
-//	ssd1306_Fill(Black); /* Clear screen*/
-//
-//	/* Draw page title header */
-////	ssd1306_DrawRect(0, 0, 16, 128, White);
-//	for (int i = 0; i < 16; i++)
-//	{
-//		for (int j = 0; j < 128; j++)
-//		{
-//			ssd1306_DrawPixel(j, i, White);
-//		}
-//	}
-//
-//	ssd1306_SetCursor(0, OLED_ROW_1);
-//	ssd1306_WriteString((char *)mode_labels[MODE_KEYPAD], Font_11x18, Black);
-//
-//	ssd1306_SetCursor(0, OLED_ROW_2);
-//
-//	/* Change selected index icon if editing value */
-//	if(updating_menu_var)
-//		ssd1306_WriteString("+", Font_11x18, White);
-//	else
-//		ssd1306_WriteString("-", Font_11x18, White);
-//
-//	if(curr_menu_pos < N_KB_OPTS)
-//	{
-//		ssd1306_SetCursor(11, OLED_ROW_2);
-//		ssd1306_WriteString((char *)kb_labels[curr_menu_pos], Font_11x18, White);
-//
-//		itoa(kb_vars[curr_menu_pos], value_label, 10);
-//
-//		ssd1306_SetCursor(77, OLED_ROW_2);
-//		ssd1306_WriteString((char *)value_label, Font_11x18, White);
-//	}
-//	else if(curr_menu_pos == N_KB_OPTS-1)
-//	{
-//		ssd1306_SetCursor(11, OLED_ROW_2);
-//		ssd1306_WriteString((char *)kb_labels[N_KB_OPTS-1], Font_11x18, White);
-//	}
-//
-//	ssd1306_UpdateScreen();
-//}
-
 
 /* Draw the rectangle representing current step */
 void draw_sequencer_step(uint8_t step)
@@ -544,29 +498,6 @@ void draw_sequencer_main_screen(void)
 /*****************************
  ****** State functions ******
  *****************************/
-void state_change(void)
-{
-	if(enc_btn2_isr_flag)
-	{
-		if(curr_mode == MODE_KEYPAD)
-		{
-			curr_enc_var = SQ_VAR_BPM;
-			curr_enc2_var = SQ_VAR_LENGTH;
-			seq_vars[SQ_VAR_PLAYING] = 1;
-			curr_mode = MODE_SEQUENCER;
-		}
-		else if(curr_mode == MODE_SEQUENCER)
-		{
-			curr_enc_var = ENC_KB_VAR_OCTAVE;
-			curr_enc2_var = ENC_KB_VAR_VELOCITY;
-			seq_vars[SQ_VAR_PLAYING] = 0;
-			curr_mode = MODE_KEYPAD;
-		}
-		update_menu();
-		enc_btn2_isr_flag = false;
-	}
-}
-
 void state_keypad(void)
 {
 	keypad_scan(&keypad);
