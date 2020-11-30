@@ -142,6 +142,7 @@ void handle_encoder(void);
 void handle_encoder_2(void);
 /* Updates a variable from the timer count value
  * and wraps values around at the limits */
+//void update_encoder(TIM_TypeDef TIMx, uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val);
 void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val);
 void update_encoder2(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val);
 void handle_encoder_btn(void);
@@ -170,6 +171,9 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 
 #define ENC2_BTN_PORT    GPIOB
 #define ENC2_BTN_PIN     GPIO_PIN_1
+
+#define ENC1_TIM         TIM2
+#define ENC2_TIM         TIM3
 
 //#define MODE_SEL_SW_PORT GPIOB
 //#define MODE_SEL_SW_PIN  GPIO_PIN_11

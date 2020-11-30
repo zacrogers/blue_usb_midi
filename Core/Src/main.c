@@ -92,10 +92,6 @@ Keypad  keypad = {.rows_port   = GPIOA,
 				  .col_pins[2] = GPIO_PIN_14,
 				  .col_pins[3] = GPIO_PIN_15}; /* PA0 and PA1 need to be used for encoder */
 
-//ShiftRegister shift_reg = {.port      = GPIOB,
-//		                   .data_pin  = GPIO_PIN_0,
-//		                   .latch_pin = GPIO_PIN_1,
-//		                   .clock_pin = GPIO_PIN_10};
 
 /* Variables relevant to the menu system */
 Mode       curr_mode         = MODE_KEYPAD;
@@ -346,9 +342,6 @@ void init_peripherals(void)
 	 * Need to write initialisers for  second encoder
 	 */
 
-	/* Init shift register */
-//	shift_reg_init(&shift_reg);
-//	shift_reg_set(&shift_reg, 0);
 }
 
 
@@ -788,6 +781,7 @@ void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_v
 	}
 
 	/* Check bounds and wrap if necessary*/
+	/*
 	if(*curr_val == 0xff && *prev_val == min)
 	{
 		TIM2->CNT = 0;
@@ -798,6 +792,21 @@ void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_v
 		TIM2->CNT = min;
 		*curr_val = min;
 	}
+	*/
+	if(*curr_val > max)
+	{
+		if(*prev_val == min)
+		{
+			TIM2->CNT = min;
+			*curr_val = TIM2->CNT;
+		}
+		else
+		{
+			TIM2->CNT = max*2;
+			*curr_val = TIM2->CNT;
+		}
+	}
+
 
 	*prev_val = *curr_val;
 }
@@ -813,6 +822,7 @@ void update_encoder2(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_
 	}
 
 	/* Check bounds and wrap if necessary*/
+	/*
 	if(*curr_val == 0xff && *prev_val == min)
 	{
 		TIM3->CNT = 0;
@@ -822,6 +832,20 @@ void update_encoder2(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_
 	{
 		TIM3->CNT = min;
 		*curr_val = min;
+	}
+	*/
+	if(*curr_val > max)
+	{
+		if(*prev_val == min)
+		{
+			TIM3->CNT = min;
+			*curr_val = TIM3->CNT;
+		}
+		else
+		{
+			TIM3->CNT = max*2;
+			*curr_val = TIM3->CNT;
+		}
 	}
 
 	*prev_val = *curr_val;
