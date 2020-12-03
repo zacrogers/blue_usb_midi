@@ -715,12 +715,19 @@ void handle_encoder_btn(void)
 				seq_vars[SQ_VAR_PLAYING] = 0;
 				curr_enc_var = ENC_SQ_VAR_STEP;
 				curr_enc2_var = ENC_SQ_VAR_NOTE;
+
+				TIM2->CNT = prev_kb_vars[SQ_VAR_STEP]*2;
+				TIM3->CNT = prev_seq[seq_vars[SQ_VAR_STEP]]*2;
+
 			}
 			else
 			{
 				seq_vars[SQ_VAR_PLAYING] = 1;
 				curr_enc_var = ENC_SQ_VAR_LENGTH;
 				curr_enc2_var = ENC_SQ_VAR_TEMPO;
+
+				TIM2->CNT = prev_kb_vars[SQ_VAR_LENGTH]*2;
+				TIM3->CNT = prev_kb_vars[SQ_VAR_BPM]*2;
 			}
 		}
 		update_menu();
@@ -743,6 +750,9 @@ void handle_encoder_btn_2(void)
 				curr_enc_var = ENC_SQ_VAR_STEP;
 				curr_enc2_var = ENC_SQ_VAR_NOTE;
 
+				TIM2->CNT = prev_kb_vars[SQ_VAR_STEP]*2;
+				TIM3->CNT = prev_seq[seq_vars[SQ_VAR_STEP]]*2;
+
 				curr_mode = MODE_SEQUENCER;
 				break;
 			}
@@ -753,6 +763,9 @@ void handle_encoder_btn_2(void)
 
 				curr_enc_var = ENC_KB_VAR_OCTAVE;
 				curr_enc2_var = ENC_KB_VAR_VELOCITY;
+
+				TIM2->CNT = prev_kb_vars[KB_VAR_OCTAVE]*2;
+				TIM3->CNT = prev_kb_vars[KB_VAR_VELOCITY]*2;
 
 				curr_mode = MODE_KEYPAD;
 				break;
@@ -772,8 +785,8 @@ long map(long x, long in_min, long in_max, long out_min, long out_max)
 
 void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val)
 {
-	/* Increments twice per click so divide by 2*/
-	*curr_val = TIM2->CNT/2;
+	TIM2->ARR = max*2;       // Set max timer value
+	*curr_val = TIM2->CNT/2; // Increments twice per click so divide by 2
 
 	if(*prev_val != *curr_val)
 	{
@@ -781,40 +794,32 @@ void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_v
 	}
 
 	/* Check bounds and wrap if necessary*/
-	/*
-	if(*curr_val == 0xff && *prev_val == min)
+	if(TIM2->CNT == max*2 && *prev_val == min)
 	{
 		TIM2->CNT = 0;
-		*curr_val = 0;
+		*curr_val = TIM2->CNT;
+	}
+
+/*
+	if(TIM2->CNT == 0xffff && *prev_val > min)
+	{
+		TIM2->CNT = 0;
+		*curr_val = TIM2->CNT;
 	}
 	else if(*curr_val > max)
 	{
-		TIM2->CNT = min;
-		*curr_val = min;
+		TIM2->CNT = max*2;
+		*curr_val = TIM2->CNT;
 	}
 	*/
-	if(*curr_val > max)
-	{
-		if(*prev_val == min)
-		{
-			TIM2->CNT = min;
-			*curr_val = TIM2->CNT;
-		}
-		else
-		{
-			TIM2->CNT = max*2;
-			*curr_val = TIM2->CNT;
-		}
-	}
-
 
 	*prev_val = *curr_val;
 }
 
 void update_encoder2(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val)
 {
-	/* Increments twice per click so divide by 2*/
-	*curr_val = TIM3->CNT/2;
+	TIM3->ARR = max*2;       // Set max timer value
+	*curr_val = TIM3->CNT/2; // Increments twice per click so divide by 2
 
 	if(*prev_val != *curr_val)
 	{
@@ -822,31 +827,19 @@ void update_encoder2(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_
 	}
 
 	/* Check bounds and wrap if necessary*/
-	/*
-	if(*curr_val == 0xff && *prev_val == min)
+
+	if(TIM3->CNT == max*2 && *prev_val == min)
 	{
 		TIM3->CNT = 0;
-		*curr_val = 0;
+		*curr_val = TIM3->CNT;
 	}
+/*
 	else if(*curr_val > max)
 	{
-		TIM3->CNT = min;
-		*curr_val = min;
+		TIM3->CNT = max*2;
+		*curr_val = TIM3->CNT;
 	}
 	*/
-	if(*curr_val > max)
-	{
-		if(*prev_val == min)
-		{
-			TIM3->CNT = min;
-			*curr_val = TIM3->CNT;
-		}
-		else
-		{
-			TIM3->CNT = max*2;
-			*curr_val = TIM3->CNT;
-		}
-	}
 
 	*prev_val = *curr_val;
 }
