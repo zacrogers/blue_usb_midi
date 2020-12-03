@@ -58,17 +58,6 @@ I2C_HandleTypeDef hi2c1;
 
 /* USER CODE BEGIN PV */
 const char *note_to_string[NUM_SEMITONES] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-
-/* Strings for menu labels */
-const char *mode_labels[N_MODES]   = {"Keypad", "Sequencer"};
-//const char *kb_labels[N_KB_OPTS]   = {"Octave", "Velocity"};
-const char *kb_labels[N_KB_OPTS]   = {"Oct", "Vel", "Back"};
-const char *seq_labels[N_SEQ_OPTS] = {"Tempo", "Length", "Set Step Note"};
-
-const char *play_labels[N_MODES]   = {"PLAY", "STOP"};
-const char *back_label = "Back";
-
-const uint8_t row_offsets[3] = {OLED_ROW_1, OLED_ROW_2, OLED_ROW_3};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -95,13 +84,9 @@ Keypad  keypad = {.rows_port   = GPIOA,
 
 /* Variables relevant to the menu system */
 Mode       curr_mode         = MODE_KEYPAD;
-Screen     screen            = SC_MAIN;
-EncoderVar curr_enc_var      = ENC_KB_OPTIONS;
-EncoderVar curr_enc2_var     = ENC_KB_OPTIONS;
+EncoderVar curr_enc_var      = ENC_KB_VAR_OCTAVE;
+EncoderVar curr_enc2_var     = ENC_KB_VAR_VELOCITY;
 
-bool       updating_menu_var = false;
-uint8_t    prev_menu_pos     = 0;
-uint8_t    curr_menu_pos     = 0;
 char       note_char[5]      = {0}; /* For displaying note to lcd */
 char       value_label[3];          /* Buffer for displaying variables in menu */
 char       note_disp[2];
@@ -650,7 +635,6 @@ void EXTI15_10_IRQHandler(void)
 	if(EXTI->PR & EXTI_PR_PR14)
 	{
 		enc_btn_isr_flag = true;
-//		handle_encoder_btn();
 		EXTI->PR |= EXTI_PR_PR14;
 	}
 }
@@ -661,7 +645,6 @@ void EXTI1_IRQHandler(void)
 	if(EXTI->PR & EXTI_PR_PR1)
 	{
 		enc_btn2_isr_flag = true;
-//		handle_encoder_btn_2();
 		EXTI->PR |= EXTI_PR_PR1;
 	}
 }
@@ -793,26 +776,6 @@ void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_v
 		update_menu();
 	}
 
-	/* Check bounds and wrap if necessary*/
-	if(TIM2->CNT == max*2 && *prev_val == min)
-	{
-		TIM2->CNT = 0;
-		*curr_val = TIM2->CNT;
-	}
-
-/*
-	if(TIM2->CNT == 0xffff && *prev_val > min)
-	{
-		TIM2->CNT = 0;
-		*curr_val = TIM2->CNT;
-	}
-	else if(*curr_val > max)
-	{
-		TIM2->CNT = max*2;
-		*curr_val = TIM2->CNT;
-	}
-	*/
-
 	*prev_val = *curr_val;
 }
 
@@ -825,21 +788,6 @@ void update_encoder2(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_
 	{
 		update_menu();
 	}
-
-	/* Check bounds and wrap if necessary*/
-
-	if(TIM3->CNT == max*2 && *prev_val == min)
-	{
-		TIM3->CNT = 0;
-		*curr_val = TIM3->CNT;
-	}
-/*
-	else if(*curr_val > max)
-	{
-		TIM3->CNT = max*2;
-		*curr_val = TIM3->CNT;
-	}
-	*/
 
 	*prev_val = *curr_val;
 }
