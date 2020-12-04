@@ -83,8 +83,8 @@ Keypad  keypad = {.rows_port   = GPIOA,
 
 /* Variables relevant to the menu system */
 Mode       curr_mode         = MODE_KEYPAD;
-EncoderVar curr_enc_var      = ENC_KB_VAR_OCTAVE;
-EncoderVar curr_enc2_var     = ENC_KB_VAR_VELOCITY;
+Enc1Var    enc_1_var         = ENC_KB_VAR_OCTAVE;
+Enc2Var    enc_2_var         = ENC_KB_VAR_VELOCITY;
 
 char       note_char[5]      = {0}; /* For displaying note to lcd */
 char       value_label[3];          /* Buffer for displaying variables in menu */
@@ -154,9 +154,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
-		handle_encoder_btn();
+		handle_encoder_btn_1();
 		handle_encoder_btn_2();
-		handle_encoder();
+		handle_encoder_1();
 		handle_encoder_2();
 
 		switch(curr_mode)
@@ -557,13 +557,12 @@ void sequencer_timer_init(void)
 
 	TIM4->CR1 &= ~(TIM_CR1_CEN);
 
+	// Setup to trigger at 1ms interval
 	TIM4->CNT = 0;
 	TIM4->PSC = 48000;
 	TIM4->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
-	// Send an update event to reset the timer and apply settings.
 
-	// Enable the hardware interrupt.
-	TIM4->DIER |= TIM_DIER_UIE;
+	TIM4->DIER |= TIM_DIER_UIE; // Enable the hardware interrupt.
 
 	NVIC_EnableIRQ(TIM4_IRQn);
 	NVIC_SetPriority(TIM4_IRQn, 3);
@@ -682,7 +681,7 @@ void encoder_button_it_init(void)
 }
 
 /* This button is used to toggle play/stop in sequencer mode */
-void handle_encoder_btn(void)
+void handle_encoder_btn_1(void)
 {
 	if(enc_btn_isr_flag)
 	{
@@ -691,9 +690,10 @@ void handle_encoder_btn(void)
 			if(seq_vars[SQ_VAR_PLAYING])
 			{
 				seq_vars[SQ_VAR_PLAYING] = 0;
-				curr_enc_var = ENC_SQ_VAR_STEP;
-				curr_enc2_var = ENC_SQ_VAR_NOTE;
+				enc_1_var = ENC_SQ_VAR_STEP;
+				enc_2_var = ENC_SQ_VAR_NOTE;
 
+				/* Reset timers to previous values */
 				TIM2->CNT = prev_kb_vars[SQ_VAR_STEP]*2;
 				TIM3->CNT = prev_seq[seq_vars[SQ_VAR_STEP]]*2;
 
@@ -701,9 +701,10 @@ void handle_encoder_btn(void)
 			else
 			{
 				seq_vars[SQ_VAR_PLAYING] = 1;
-				curr_enc_var = ENC_SQ_VAR_LENGTH;
-				curr_enc2_var = ENC_SQ_VAR_TEMPO;
+				enc_1_var = ENC_SQ_VAR_LENGTH;
+				enc_2_var = ENC_SQ_VAR_TEMPO;
 
+				/* Reset timers to previous values */
 				TIM2->CNT = prev_kb_vars[SQ_VAR_LENGTH]*2;
 				TIM3->CNT = prev_kb_vars[SQ_VAR_BPM]*2;
 			}
@@ -725,9 +726,10 @@ void handle_encoder_btn_2(void)
 				seq_vars[SQ_VAR_STEP] = 0;
 				seq_vars[SQ_VAR_PLAYING] = 0;
 
-				curr_enc_var = ENC_SQ_VAR_STEP;
-				curr_enc2_var = ENC_SQ_VAR_NOTE;
+				enc_1_var = ENC_SQ_VAR_STEP;
+				enc_2_var = ENC_SQ_VAR_NOTE;
 
+				/* Reset timers to previous values */
 				TIM2->CNT = prev_kb_vars[SQ_VAR_STEP]*2;
 				TIM3->CNT = prev_seq[seq_vars[SQ_VAR_STEP]]*2;
 
@@ -739,9 +741,10 @@ void handle_encoder_btn_2(void)
 				seq_vars[SQ_VAR_STEP] = 0;
 				seq_vars[SQ_VAR_PLAYING] = 0;
 
-				curr_enc_var = ENC_KB_VAR_OCTAVE;
-				curr_enc2_var = ENC_KB_VAR_VELOCITY;
+				enc_1_var = ENC_KB_VAR_OCTAVE;
+				enc_2_var = ENC_KB_VAR_VELOCITY;
 
+				/* Reset timers to previous values */
 				TIM2->CNT = prev_kb_vars[KB_VAR_OCTAVE]*2;
 				TIM3->CNT = prev_kb_vars[KB_VAR_VELOCITY]*2;
 
@@ -755,16 +758,10 @@ void handle_encoder_btn_2(void)
 }
 
 
-
-long map(long x, long in_min, long in_max, long out_min, long out_max)
+void update_encoder(TIM_TypeDef *TIMx, uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val)
 {
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val)
-{
-	TIM2->ARR = max*2;       // Set max timer value
-	*curr_val = TIM2->CNT/2; // Increments twice per click so divide by 2
+	TIMx->ARR = max*2;       // Set max timer value
+	*curr_val = TIMx->CNT/2; // Increments twice per click so divide by 2
 
 	if(*prev_val != *curr_val)
 	{
@@ -774,66 +771,49 @@ void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_v
 	*prev_val = *curr_val;
 }
 
-void update_encoder2(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val)
+
+void handle_encoder_1(void)
 {
-	TIM3->ARR = max*2;       // Set max timer value
-	*curr_val = TIM3->CNT/2; // Increments twice per click so divide by 2
-
-	if(*prev_val != *curr_val)
-	{
-		update_menu();
-	}
-
-	*prev_val = *curr_val;
-}
-
-void handle_encoders(uint8_t enc_num)
-{
-
-}
-
-void handle_encoder(void)
-{
-	switch(curr_enc_var)
+	switch(enc_1_var)
 	{
 		case ENC_KB_VAR_OCTAVE:
 		{
-			update_encoder(0, MAX_MIDI_OCTAVES, &kb_vars[KB_VAR_OCTAVE], &prev_kb_vars[KB_VAR_OCTAVE]);
+			update_encoder(TIM2, 0, MAX_MIDI_OCTAVES, &kb_vars[KB_VAR_OCTAVE], &prev_kb_vars[KB_VAR_OCTAVE]);
 			break;
 		}
 		case ENC_SQ_VAR_LENGTH:
 		{
-			update_encoder(0, MAX_VELOCITY, &seq_vars[SQ_VAR_LENGTH], &prev_seq_vars[SQ_VAR_LENGTH]);
+			update_encoder(TIM2, 0, MAX_VELOCITY, &seq_vars[SQ_VAR_LENGTH], &prev_seq_vars[SQ_VAR_LENGTH]);
 			break;
 		}
 		case ENC_SQ_VAR_STEP:
 		{
-			update_encoder(0, N_SEQ_STEPS, &seq_vars[SQ_VAR_STEP], &prev_seq_vars[SQ_VAR_STEP]);
+			update_encoder(TIM2, 0, N_SEQ_STEPS, &seq_vars[SQ_VAR_STEP], &prev_seq_vars[SQ_VAR_STEP]);
 			break;
 		}
 	}
 }
 
+
 void handle_encoder_2(void)
 {
-	switch(curr_enc2_var)
+	switch(enc_2_var)
 	{
 		case ENC_KB_VAR_VELOCITY:
 		{
-			update_encoder2(0, MAX_VELOCITY, &kb_vars[KB_VAR_VELOCITY], &prev_kb_vars[KB_VAR_VELOCITY]);
+			update_encoder(TIM3, 0, MAX_VELOCITY, &kb_vars[KB_VAR_VELOCITY], &prev_kb_vars[KB_VAR_VELOCITY]);
 			break;
 		}
 		case ENC_SQ_VAR_TEMPO:
 		{
-			update_encoder2(MIN_BPM, MAX_BPM, &seq_vars[SQ_VAR_BPM], &prev_seq_vars[SQ_VAR_BPM]);
+			update_encoder(TIM3, MIN_BPM, MAX_BPM, &seq_vars[SQ_VAR_BPM], &prev_seq_vars[SQ_VAR_BPM]);
 			break;
 		}
 		case ENC_SQ_VAR_NOTE:
 		{
-			update_encoder2(0, MAX_MIDI_NOTE, &sequence[seq_vars[SQ_VAR_STEP]], &prev_seq[seq_vars[SQ_VAR_STEP]]);
+			update_encoder(TIM3, 0, MAX_MIDI_NOTE, &sequence[seq_vars[SQ_VAR_STEP]], &prev_seq[seq_vars[SQ_VAR_STEP]]);
 			break;
 		}
-
 	}
 }
 

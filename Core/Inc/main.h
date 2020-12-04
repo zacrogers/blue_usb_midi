@@ -58,28 +58,21 @@ typedef enum
 	SC_OPTIONS
 }Screen;
 
-/* This is used to control what value is currently being changed by the encode r*/
+/* This is used to control what value is currently being changed by the encoders */
+
 typedef enum
 {
-	ENC_KB_OPTIONS,
 	ENC_KB_VAR_OCTAVE,
-	ENC_KB_VAR_VELOCITY,
-	ENC_SQ_OPTIONS,
-	ENC_SQ_VAR_TEMPO,
 	ENC_SQ_VAR_LENGTH,
-	ENC_SQ_VAR_STEP,
-	ENC_SQ_VAR_NOTE
-}EncoderVar;
+	ENC_SQ_VAR_STEP
+}Enc1Var;
 
-//typedef enum
-//{
-//
-//}Enc1Var;
-//
-//typedef enum
-//{
-//
-//}Enc2Var;
+typedef enum
+{
+	ENC_KB_VAR_VELOCITY,
+	ENC_SQ_VAR_TEMPO,
+	ENC_SQ_VAR_NOTE
+}Enc2Var;
 
 /* The variable for the keyboard and sequencer modes are both stored in arrays.
  * The two following enums are used for indexing these arrays
@@ -134,27 +127,23 @@ void sequencer_timer_start(void);
 void sequencer_timer_stop(void);
 void sequencer_update_bpm(void);
 
+/* Encoder functions */
 void encoder_timer_init(void);
 void encoder_button_it_init(void);
 
 /* Handles the mapping of what value the encoder is controlling */
-void handle_encoders(uint8_t enc_num);
-void handle_encoder(void);
+void handle_encoder_1(void);
 void handle_encoder_2(void);
 /* Updates a variable from the timer count value
  * and wraps values around at the limits */
-//void update_encoder(TIM_TypeDef TIMx, uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val);
-void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val);
-void update_encoder2(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val);
-void handle_encoder_btn(void);
+void update_encoder(TIM_TypeDef *TIMx, uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val);
+void handle_encoder_btn_1(void);
 void handle_encoder_btn_2(void);
 
 /* Redraw the menu */
 void update_menu(void);
 void draw_keypad_main_screen(void);
-//void draw_keypad_options_screen(void);
 void draw_sequencer_main_screen(void);
-//void draw_sequencer_options_screen(void);
 
 void draw_sequencer_step(uint8_t step);
 
@@ -172,12 +161,6 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 
 #define ENC2_BTN_PORT    GPIOB
 #define ENC2_BTN_PIN     GPIO_PIN_1
-
-#define ENC1_TIM         TIM2
-#define ENC2_TIM         TIM3
-
-//#define MODE_SEL_SW_PORT GPIOB
-//#define MODE_SEL_SW_PIN  GPIO_PIN_11
 
 #define MAX_MIDI_OCTAVES 10
 #define MAX_MIDI_NOTE    127
