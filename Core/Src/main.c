@@ -81,7 +81,6 @@ Keypad  keypad = {.rows_port   = GPIOA,
 				  .col_pins[2] = GPIO_PIN_14,
 				  .col_pins[3] = GPIO_PIN_15}; /* PA0 and PA1 need to be used for encoder */
 
-
 /* Variables relevant to the menu system */
 Mode       curr_mode         = MODE_KEYPAD;
 EncoderVar curr_enc_var      = ENC_KB_VAR_OCTAVE;
@@ -323,10 +322,6 @@ void init_peripherals(void)
 	/* Init rotary encoder*/
 	encoder_timer_init();
 	encoder_button_it_init();
-	/*
-	 * Need to write initialisers for  second encoder
-	 */
-
 }
 
 
@@ -792,6 +787,10 @@ void update_encoder2(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_
 	*prev_val = *curr_val;
 }
 
+void handle_encoders(uint8_t enc_num)
+{
+
+}
 
 void handle_encoder(void)
 {

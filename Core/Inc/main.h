@@ -138,6 +138,7 @@ void encoder_timer_init(void);
 void encoder_button_it_init(void);
 
 /* Handles the mapping of what value the encoder is controlling */
+void handle_encoders(uint8_t enc_num);
 void handle_encoder(void);
 void handle_encoder_2(void);
 /* Updates a variable from the timer count value
