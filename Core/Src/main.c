@@ -92,11 +92,11 @@ char       note_disp[2];
 char       midi_note_disp[3];
 
 /* Variables relevant to midi data */
-uint8_t    midi_channel              = 0;
-uint8_t    last_note_pressed         = 0;
+uint8_t    midi_channel             = 0;
+uint8_t    last_note_pressed        = 0;
 
-uint8_t    kb_vars[N_KB_OPTS]        = {10, 100};     /* Octave, velocity */
-uint8_t    prev_kb_vars[N_KB_OPTS]   = {0, 0};
+uint8_t    kb_vars[KB_VAR_N]        = {10, 100};     /* Octave, velocity */
+uint8_t    prev_kb_vars[KB_VAR_N]   = {0, 0};
 
 uint8_t    seq_vars[SQ_VAR_N]      = {120, 50, 1, 0}; /* BPM, length, playing, step*/
 uint8_t    prev_seq_vars[SQ_VAR_N] = {0};
@@ -154,8 +154,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
-		handle_encoder_btn_1();
-		handle_encoder_btn_2();
+		handle_encoder_btn_1(); // Toggles play state
+		handle_encoder_btn_2(); // Toggles modes
 		handle_encoder_1();
 		handle_encoder_2();
 
@@ -169,6 +169,7 @@ int main(void)
 			case MODE_SEQUENCER:
 			{
 				state_sequencer();
+				sequencer_update_bpm();
 				break;
 			}
 		}
@@ -287,12 +288,6 @@ void gpio_init(void)
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 	HAL_GPIO_Init(OB_LED_PORT, &GPIO_InitStruct);
-
-	/* Init mode select input pin */
-//	GPIO_InitStruct.Pin = MODE_SEL_SW_PIN;
-//	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-//	GPIO_InitStruct.Pull = GPIO_NOPULL;
-//	HAL_GPIO_Init(MODE_SEL_SW_PORT, &GPIO_InitStruct);
 }
 
 void init_peripherals(void)
@@ -569,29 +564,13 @@ void sequencer_timer_init(void)
 	TIM4->CR1 |= TIM_CR1_CEN; /* Enable timer */
 }
 
-void sequencer_timer_start(void)
-{
-//	TIM4->EGR  |= TIM_EGR_UG;
-	sequencer_timer_init();
-//	TIM4->CNT = 0;
-//	TIM4->DIER |= TIM_DIER_UIE;
-//	NVIC_EnableIRQ(TIM4_IRQn);
-//	TIM4->CR1 |= TIM_CR1_CEN; /* Enable timer */
-}
-
-void sequencer_timer_stop(void)
-{
-	TIM4->CR1 &= ~(TIM_CR1_CEN);
-}
-
 void sequencer_update_bpm(void)
 {
-//	TIM3->CR1 &= ~TIM_CR1_CEN; /* Disable timer */
-//	TIM3->CNT = 0;
-	sequencer_timer_stop();
-	TIM4->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
-	sequencer_timer_start();
-	TIM4->CR1 |= TIM_CR1_CEN; /* Enable timer */
+	if(prev_seq_vars[SQ_VAR_BPM] != seq_vars[SQ_VAR_BPM])
+	{
+		TIM4->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
+		TIM4->CNT = 0;
+	}
 }
 
 
