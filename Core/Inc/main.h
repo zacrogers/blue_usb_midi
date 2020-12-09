@@ -91,7 +91,7 @@ typedef enum
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-#define BPM_TO_MS(bpm) ((60000)/(bpm))
+#define BPM_TO_MS(bpm) (((60000)/(bpm)))
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/

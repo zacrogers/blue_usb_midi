@@ -753,10 +753,15 @@ void update_encoder(TIM_TypeDef *TIMx, uint8_t min, uint8_t max, uint8_t *curr_v
 	if(*prev_val != *curr_val)
 	{
 		/* THIS IS DIRTY */
-		if(curr_mode == MODE_SEQUENCER && TIMx == TIM2)
+		if(curr_mode == MODE_SEQUENCER && enc_1_var == ENC_SQ_VAR_STEP && TIMx == TIM2)
 		{
 			TIM3->CNT = prev_seq[*curr_val]*2;
 			sequence[*curr_val] = TIM3->CNT;
+		}
+
+		if(curr_mode == MODE_SEQUENCER && enc_2_var == ENC_SQ_VAR_TEMPO && TIMx == TIM3)
+		{
+			sequencer_update_bpm();
 		}
 
 		update_menu();
