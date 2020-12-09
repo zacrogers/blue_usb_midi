@@ -47,39 +47,21 @@ typedef enum
 	MODE_SEQUENCER
 }Mode;
 
-/*
- *  Each mode has a main and options screen.
- *  The main screen displays the current relevant values for each mode.
- *  The options screen is used for navigation and setting of the various values.
- */
-typedef enum
-{
-	SC_MAIN,
-	SC_OPTIONS
-}Screen;
 
-/* This is used to control what value is currently being changed by the encode r*/
+/* These are used to control what value is currently being changed by the encoders */
 typedef enum
 {
-	ENC_KB_OPTIONS,
 	ENC_KB_VAR_OCTAVE,
-	ENC_KB_VAR_VELOCITY,
-	ENC_SQ_OPTIONS,
-	ENC_SQ_VAR_TEMPO,
 	ENC_SQ_VAR_LENGTH,
-	ENC_SQ_VAR_STEP,
-	ENC_SQ_VAR_NOTE
-}EncoderVar;
+	ENC_SQ_VAR_STEP
+}Enc1Var;
 
-//typedef enum
-//{
-//
-//}Enc1Var;
-//
-//typedef enum
-//{
-//
-//}Enc2Var;
+typedef enum
+{
+	ENC_KB_VAR_VELOCITY,
+	ENC_SQ_VAR_TEMPO,
+	ENC_SQ_VAR_NOTE
+}Enc2Var;
 
 /* The variable for the keyboard and sequencer modes are both stored in arrays.
  * The two following enums are used for indexing these arrays
@@ -88,7 +70,6 @@ typedef enum
 {
 	KB_VAR_OCTAVE,
 	KB_VAR_VELOCITY,
-	KB_VAR_NOTE,
 	KB_VAR_N
 }KbVars;
 
@@ -110,7 +91,7 @@ typedef enum
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-#define BPM_TO_MS(bpm) ((60000)/(bpm))
+#define BPM_TO_MS(bpm) (((60000)/(bpm)))
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
@@ -120,7 +101,7 @@ void Error_Handler(void);
 void gpio_init(void);
 void init_peripherals(void);
 
-void state_change(void);
+/* State functions */
 void state_keypad(void);
 void state_sequencer(void);
 
@@ -134,31 +115,26 @@ void sequencer_timer_start(void);
 void sequencer_timer_stop(void);
 void sequencer_update_bpm(void);
 
+/* Encoder functions */
 void encoder_timer_init(void);
 void encoder_button_it_init(void);
 
-/* Handles the mapping of what value the encoder is controlling */
-void handle_encoders(uint8_t enc_num);
-void handle_encoder(void);
+/* Handles the mapping of what value the encoders are controlling */
+void handle_encoder_1(void);
 void handle_encoder_2(void);
-/* Updates a variable from the timer count value
- * and wraps values around at the limits */
-//void update_encoder(TIM_TypeDef TIMx, uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val);
-void update_encoder(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val);
-void update_encoder2(uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val);
-void handle_encoder_btn(void);
+
+/* Updates the given encoder values from the given timer */
+void update_encoder(TIM_TypeDef *TIMx, uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val);
+
+void handle_encoder_btn_1(void);
 void handle_encoder_btn_2(void);
 
-/* Redraw the menu */
+/* Oled drawing functions */
 void update_menu(void);
 void draw_keypad_main_screen(void);
-//void draw_keypad_options_screen(void);
 void draw_sequencer_main_screen(void);
-//void draw_sequencer_options_screen(void);
-
 void draw_sequencer_step(uint8_t step);
 
-long map(long x, long in_min, long in_max, long out_min, long out_max);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
@@ -173,12 +149,6 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 #define ENC2_BTN_PORT    GPIOB
 #define ENC2_BTN_PIN     GPIO_PIN_1
 
-#define ENC1_TIM         TIM2
-#define ENC2_TIM         TIM3
-
-//#define MODE_SEL_SW_PORT GPIOB
-//#define MODE_SEL_SW_PIN  GPIO_PIN_11
-
 #define MAX_MIDI_OCTAVES 10
 #define MAX_MIDI_NOTE    127
 #define MAX_VELOCITY     127
@@ -189,7 +159,7 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 #define MIN_BPM          50
 #define MAX_BPM          200
 
-/* Offset depends on font used*/
+/* Offset depends on font used */
 #define OLED_ROW_1       0
 #define OLED_ROW_2       20
 #define OLED_ROW_3       40
@@ -197,14 +167,8 @@ long map(long x, long in_min, long in_max, long out_min, long out_max);
 /* Set the top position of the sequencer frame */
 #define SEQ_FR_TOP       44
 
-/* Defines for menu options */
-#define N_MODES          2
-#define N_KB_OPTS        3
-#define N_SEQ_OPTS       3
+/* Number of sequencer steps */
 #define N_SEQ_STEPS      8
-
-#define BUTTON1_HANDLER
-#define BUTTON2_HANDLER
 
 /* USER CODE END Private defines */
 
