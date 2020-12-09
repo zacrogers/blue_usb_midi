@@ -169,7 +169,6 @@ int main(void)
 			case MODE_SEQUENCER:
 			{
 				state_sequencer();
-//				sequencer_update_bpm();
 				break;
 			}
 		}
@@ -810,12 +809,7 @@ void handle_encoder_2(void)
 		}
 		case ENC_SQ_VAR_NOTE:
 		{
-			/*
-			 * CHECK THIS!!!!!!!!!
-			 * Hopefully this fixes the sequencer note updating
-			 */
 			update_encoder(TIM3, 0, MAX_MIDI_NOTE, &sequence[seq_vars[SQ_VAR_STEP]], &prev_seq[seq_vars[SQ_VAR_STEP]]);
-			//update_encoder(TIM3, 0, MAX_MIDI_NOTE, &sequence[seq_vars[SQ_VAR_STEP]], &prev_seq[seq_vars[SQ_VAR_STEP]]);
 			break;
 		}
 	}
