@@ -26,6 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <stdbool.h>
 #include "usb_device.h"
 #include "usbd_core.h"
@@ -79,7 +80,7 @@ Keypad  keypad = {.rows_port   = GPIOA,
 				  .col_pins[0] = GPIO_PIN_12,
 				  .col_pins[1] = GPIO_PIN_13,
 				  .col_pins[2] = GPIO_PIN_14,
-				  .col_pins[3] = GPIO_PIN_15}; /* PA0 and PA1 need to be used for encoder */
+				  .col_pins[3] = GPIO_PIN_15};
 
 /* Variables relevant to the menu system */
 Mode       curr_mode         = MODE_KEYPAD;
@@ -95,22 +96,21 @@ char       midi_note_disp[3];
 uint8_t    midi_channel             = 0;
 uint8_t    last_note_pressed        = 0;
 
-uint8_t    kb_vars[KB_VAR_N]        = {10, 100};     /* Octave, velocity */
+uint8_t    kb_vars[KB_VAR_N]        = {5, 100};     /* Octave, velocity */
 uint8_t    prev_kb_vars[KB_VAR_N]   = {0, 0};
 
 uint8_t    seq_vars[SQ_VAR_N]      = {120, 50, 1, 0}; /* BPM, length, playing, step*/
 uint8_t    prev_seq_vars[SQ_VAR_N] = {0};
 
 uint8_t    sequence[8]  = {69, 71, 72, 74, 76, 77, 79, 80};
-uint8_t    prev_seq[8] = {0};
+uint8_t    prev_seq[8] = {69, 71, 72, 74, 76, 77, 79, 80};
 
 /* Flags for interrupt routines */
 volatile bool enc_btn_isr_flag  = false;
 volatile bool enc_btn2_isr_flag = false;
 volatile bool seq_tim_isr_flag  = false;
 
-volatile bool enc_btnlong_press = false;
-volatile int enc_btn_long_press_cnt = 0;
+volatile bool step_changed = false;
 /* USER CODE END 0 */
 
 /**
@@ -169,7 +169,7 @@ int main(void)
 			case MODE_SEQUENCER:
 			{
 				state_sequencer();
-				sequencer_update_bpm();
+//				sequencer_update_bpm();
 				break;
 			}
 		}
@@ -317,6 +317,10 @@ void init_peripherals(void)
 	/* Init rotary encoder*/
 	encoder_timer_init();
 	encoder_button_it_init();
+
+	/* Init encoder timer values */
+	TIM2->CNT = kb_vars[KB_VAR_OCTAVE]*2;
+	TIM3->CNT = kb_vars[KB_VAR_VELOCITY]*2;
 }
 
 
@@ -340,6 +344,7 @@ void update_menu(void)
 		}
 	}
 }
+
 
 void draw_keypad_main_screen(void)
 {
@@ -377,6 +382,7 @@ void draw_sequencer_step(uint8_t step)
 		}
 	}
 }
+
 
 void draw_sequencer_main_screen(void)
 {
@@ -487,19 +493,20 @@ void state_sequencer(void)
 				seq_vars[SQ_VAR_STEP] = 0;
 			}
 
-			int ind = sequence[seq_vars[SQ_VAR_STEP]] % NUM_SEMITONES;
+			//int ind = sequence[seq_vars[SQ_VAR_STEP]] % NUM_SEMITONES;
 			midi_note_on(midi_channel, sequence[seq_vars[SQ_VAR_STEP]], kb_vars[KB_VAR_VELOCITY]);
 
 			/* Copy note to string for oled display*/
 			itoa(sequence[seq_vars[SQ_VAR_STEP]], midi_note_disp, 10);
-			strcpy(note_disp, note_to_string[ind]);
+			//strcpy(note_disp, note_to_string[ind]);
 			update_menu();
+			HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
 			seq_tim_isr_flag = false;
 		}
 	}
 	else if(!seq_vars[SQ_VAR_PLAYING])
 	{
-		/* Copy note to string for oled display*/
+		// Copy note to string for oled display
 		itoa(sequence[seq_vars[SQ_VAR_STEP]], midi_note_disp, 10);
 		update_menu();
 	}
@@ -673,9 +680,8 @@ void handle_encoder_btn_1(void)
 				enc_2_var = ENC_SQ_VAR_NOTE;
 
 				/* Reset timers to previous values */
-				TIM2->CNT = prev_kb_vars[SQ_VAR_STEP]*2;
-				TIM3->CNT = prev_seq[seq_vars[SQ_VAR_STEP]]*2;
-
+				TIM2->CNT = seq_vars[SQ_VAR_STEP]*2;
+				TIM3->CNT = seq_vars[seq_vars[SQ_VAR_STEP]]*2;
 			}
 			else
 			{
@@ -684,8 +690,8 @@ void handle_encoder_btn_1(void)
 				enc_2_var = ENC_SQ_VAR_TEMPO;
 
 				/* Reset timers to previous values */
-				TIM2->CNT = prev_kb_vars[SQ_VAR_LENGTH]*2;
-				TIM3->CNT = prev_kb_vars[SQ_VAR_BPM]*2;
+				TIM2->CNT = prev_seq_vars[SQ_VAR_LENGTH]*2;
+				TIM3->CNT = prev_seq_vars[SQ_VAR_BPM]*2;
 			}
 		}
 		update_menu();
@@ -709,8 +715,8 @@ void handle_encoder_btn_2(void)
 				enc_2_var = ENC_SQ_VAR_NOTE;
 
 				/* Reset timers to previous values */
-				TIM2->CNT = prev_kb_vars[SQ_VAR_STEP]*2;
-				TIM3->CNT = prev_seq[seq_vars[SQ_VAR_STEP]]*2;
+				TIM2->CNT = prev_seq_vars[SQ_VAR_STEP]*2;
+				TIM3->CNT = prev_seq[prev_seq_vars[SQ_VAR_STEP]]*2;
 
 				curr_mode = MODE_SEQUENCER;
 				break;
@@ -739,11 +745,20 @@ void handle_encoder_btn_2(void)
 
 void update_encoder(TIM_TypeDef *TIMx, uint8_t min, uint8_t max, uint8_t *curr_val, uint8_t *prev_val)
 {
+	assert(TIMx == TIM2 || TIMx == TIM3);
+
 	TIMx->ARR = max*2;       // Set max timer value
 	*curr_val = TIMx->CNT/2; // Increments twice per click so divide by 2
 
 	if(*prev_val != *curr_val)
 	{
+		/* THIS IS DIRTY */
+		if(curr_mode == MODE_SEQUENCER && TIMx == TIM2)
+		{
+			TIM3->CNT = prev_seq[*curr_val]*2;
+			sequence[*curr_val] = TIM3->CNT;
+		}
+
 		update_menu();
 	}
 
@@ -790,7 +805,12 @@ void handle_encoder_2(void)
 		}
 		case ENC_SQ_VAR_NOTE:
 		{
+			/*
+			 * CHECK THIS!!!!!!!!!
+			 * Hopefully this fixes the sequencer note updating
+			 */
 			update_encoder(TIM3, 0, MAX_MIDI_NOTE, &sequence[seq_vars[SQ_VAR_STEP]], &prev_seq[seq_vars[SQ_VAR_STEP]]);
+			//update_encoder(TIM3, 0, MAX_MIDI_NOTE, &sequence[seq_vars[SQ_VAR_STEP]], &prev_seq[seq_vars[SQ_VAR_STEP]]);
 			break;
 		}
 	}
