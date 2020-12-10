@@ -505,9 +505,6 @@ void state_sequencer(void)
 				itoa(sequence[seq_vars[SQ_VAR_STEP]], midi_note_disp, 10);
 				//strcpy(note_disp, note_to_string[ind]);
 				update_menu();
-//				TIM4->ARR = (BPM_TO_MS(seq_vars[SQ_VAR_BPM]*2));
-//				TIM4->ARR = (int)(BPM_TO_MS(seq_vars[SQ_VAR_BPM]/MAX_NOTE_LEN) * MAX_NOTE_LEN);
-//				TIM4->CNT = 0;
 				seq_note_on = true;
 			}
 			else
@@ -515,9 +512,6 @@ void state_sequencer(void)
 
 				midi_note_off(midi_channel, sequence[prev_seq_vars[SQ_VAR_STEP]], kb_vars[KB_VAR_VELOCITY]);
 				HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
-//				TIM4->ARR = (BPM_TO_MS(seq_vars[SQ_VAR_BPM]*2));
-//				TIM4->ARR = (int)(BPM_TO_MS(seq_vars[SQ_VAR_BPM]/MAX_NOTE_LEN) * (MAX_NOTE_LEN-seq_vars[SQ_VAR_LENGTH]));
-//				TIM4->CNT = 0;
 				seq_note_on = false;
 			}
 			seq_tim_isr_flag = false;
