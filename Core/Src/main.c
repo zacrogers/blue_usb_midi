@@ -99,8 +99,8 @@ uint8_t    last_note_pressed        = 0;
 uint8_t    kb_vars[KB_VAR_N]        = {5, 100};     /* Octave, velocity */
 uint8_t    prev_kb_vars[KB_VAR_N]   = {0, 0};
 
-uint8_t    seq_vars[SQ_VAR_N]      = {120, 50, 1, 0}; /* BPM, length, playing, step*/
-uint8_t    prev_seq_vars[SQ_VAR_N] = {0};
+uint8_t    seq_vars[SQ_VAR_N]      = {120, 5, 1, 0}; /* BPM, length, playing, step*/
+uint8_t    prev_seq_vars[SQ_VAR_N] = {0, 0, 0, 0};
 
 uint8_t    sequence[8]  = {69, 71, 72, 74, 76, 77, 79, 80};
 uint8_t    prev_seq[8] = {69, 71, 72, 74, 76, 77, 79, 80};
@@ -111,6 +111,9 @@ volatile bool enc_btn2_isr_flag = false;
 volatile bool seq_tim_isr_flag  = false;
 
 volatile bool step_changed = false;
+
+volatile bool seq_note_on = false;
+volatile bool seq_note_off = false;
 /* USER CODE END 0 */
 
 /**
@@ -395,6 +398,7 @@ void draw_sequencer_main_screen(void)
 	ssd1306_SetCursor(44, OLED_ROW_1);
 	ssd1306_WriteString(value_label, Font_11x18, White);
 
+	/* Commented out while note length not enabled */
 	ssd1306_SetCursor(0, OLED_ROW_2);
 	ssd1306_WriteString("Len:", Font_11x18, White);
 
@@ -483,23 +487,30 @@ void state_sequencer(void)
 	{
 		if(seq_tim_isr_flag)
 		{
-			if(seq_vars[SQ_VAR_STEP] < N_SEQ_STEPS-1)
+			if(seq_note_on)
 			{
-				seq_vars[SQ_VAR_STEP]++;
+				if(seq_vars[SQ_VAR_STEP] < N_SEQ_STEPS-1)
+				{
+					seq_vars[SQ_VAR_STEP]++;
+				}
+				else
+				{
+					seq_vars[SQ_VAR_STEP] = 0;
+				}
+				prev_seq_vars[SQ_VAR_STEP] = seq_vars[SQ_VAR_STEP];
+
+				midi_note_on(midi_channel, sequence[seq_vars[SQ_VAR_STEP]], kb_vars[KB_VAR_VELOCITY]);
+
+				/* Copy note to string for oled display*/
+				itoa(sequence[seq_vars[SQ_VAR_STEP]], midi_note_disp, 10);
+				update_menu();
+				seq_note_on = false;
 			}
 			else
 			{
-				seq_vars[SQ_VAR_STEP] = 0;
+				midi_note_off(midi_channel, sequence[prev_seq_vars[SQ_VAR_STEP]], kb_vars[KB_VAR_VELOCITY]);
+				seq_note_on = true;
 			}
-
-			//int ind = sequence[seq_vars[SQ_VAR_STEP]] % NUM_SEMITONES;
-			midi_note_on(midi_channel, sequence[seq_vars[SQ_VAR_STEP]], kb_vars[KB_VAR_VELOCITY]);
-
-			/* Copy note to string for oled display*/
-			itoa(sequence[seq_vars[SQ_VAR_STEP]], midi_note_disp, 10);
-			//strcpy(note_disp, note_to_string[ind]);
-			update_menu();
-			HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
 			seq_tim_isr_flag = false;
 		}
 	}
@@ -540,11 +551,22 @@ void key_down_handler(const char key)
  ***** Sequencer functions *****
  *******************************/
 
+volatile uint16_t seq_timer_cnt = 0;
+
 /* Sequencer timer */
 void TIM4_IRQHandler(void)
 {
 	if (TIM4->SR & TIM_SR_UIF)
 	{
+		if(seq_note_on)
+		{
+			TIM4->ARR = (int)(BPM_TO_MS(seq_vars[SQ_VAR_BPM]*2) / MAX_NOTE_LEN) * seq_vars[SQ_VAR_LENGTH];
+		}
+		else
+		{
+			TIM4->ARR = (int)(BPM_TO_MS(seq_vars[SQ_VAR_BPM]*2) / MAX_NOTE_LEN) * (MAX_NOTE_LEN -seq_vars[SQ_VAR_LENGTH]);
+		}
+
 		seq_tim_isr_flag = true;
 		TIM4->CNT = 0;
 		TIM4->SR &= ~(TIM_SR_UIF);
@@ -554,14 +576,15 @@ void TIM4_IRQHandler(void)
 /* APB1 clock 48MHz*/
 void sequencer_timer_init(void)
 {
+	/* Main sequencer timer*/
 	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
 
 	TIM4->CR1 &= ~(TIM_CR1_CEN);
 
 	// Setup to trigger at 1ms interval
 	TIM4->CNT = 0;
-	TIM4->PSC = 48000;
-	TIM4->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
+	TIM4->PSC = 48000-1;
+	TIM4->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]*2);
 
 	TIM4->DIER |= TIM_DIER_UIE; // Enable the hardware interrupt.
 
@@ -570,11 +593,12 @@ void sequencer_timer_init(void)
 	TIM4->CR1 |= TIM_CR1_CEN; /* Enable timer */
 }
 
+
 void sequencer_update_bpm(void)
 {
 	if(prev_seq_vars[SQ_VAR_BPM] != seq_vars[SQ_VAR_BPM])
 	{
-		TIM4->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]);
+		TIM4->ARR = (BPM_TO_MS(seq_vars[SQ_VAR_BPM]*2));
 		TIM4->CNT = 0;
 	}
 }
@@ -756,6 +780,12 @@ void update_encoder(TIM_TypeDef *TIMx, uint8_t min, uint8_t max, uint8_t *curr_v
 		{
 			TIM3->CNT = prev_seq[*curr_val]*2;
 			sequence[*curr_val] = TIM3->CNT;
+			midi_note_off(midi_channel, sequence[*curr_val], kb_vars[KB_VAR_VELOCITY]);
+		}
+
+		if(curr_mode == MODE_SEQUENCER && enc_1_var == ENC_SQ_VAR_LENGTH && TIMx == TIM2)
+		{
+			sequencer_update_bpm();
 		}
 
 		if(curr_mode == MODE_SEQUENCER && enc_2_var == ENC_SQ_VAR_TEMPO && TIMx == TIM3)
@@ -781,7 +811,7 @@ void handle_encoder_1(void)
 		}
 		case ENC_SQ_VAR_LENGTH:
 		{
-			update_encoder(TIM2, 0, MAX_VELOCITY, &seq_vars[SQ_VAR_LENGTH], &prev_seq_vars[SQ_VAR_LENGTH]);
+			update_encoder(TIM2, MIN_NOTE_LEN, MAX_NOTE_LEN, &seq_vars[SQ_VAR_LENGTH], &prev_seq_vars[SQ_VAR_LENGTH]);
 			break;
 		}
 		case ENC_SQ_VAR_STEP:
