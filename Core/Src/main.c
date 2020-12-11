@@ -99,7 +99,7 @@ uint8_t    last_note_pressed        = 0;
 uint8_t    kb_vars[KB_VAR_N]        = {5, 100};     /* Octave, velocity */
 uint8_t    prev_kb_vars[KB_VAR_N]   = {0, 0};
 
-uint8_t    seq_vars[SQ_VAR_N]      = {120, 50, 1, 0}; /* BPM, length, playing, step*/
+uint8_t    seq_vars[SQ_VAR_N]      = {120, 5, 1, 0}; /* BPM, length, playing, step*/
 uint8_t    prev_seq_vars[SQ_VAR_N] = {0, 0, 0, 0};
 
 uint8_t    sequence[8]  = {69, 71, 72, 74, 76, 77, 79, 80};
@@ -391,20 +391,20 @@ void draw_sequencer_main_screen(void)
 	ssd1306_Fill(Black); /* Clear screen*/
 
 	/* Draw text labels */
-	ssd1306_SetCursor(0, OLED_ROW_1 + 10);
+	ssd1306_SetCursor(0, OLED_ROW_1);
 	ssd1306_WriteString("BPM:", Font_11x18, White);
 
 	itoa(seq_vars[SQ_VAR_BPM], value_label, 10);
-	ssd1306_SetCursor(44, OLED_ROW_1 + 10);
+	ssd1306_SetCursor(44, OLED_ROW_1);
 	ssd1306_WriteString(value_label, Font_11x18, White);
 
 	/* Commented out while note length not enabled */
-//	ssd1306_SetCursor(0, OLED_ROW_2);
-//	ssd1306_WriteString("Len:", Font_11x18, White);
+	ssd1306_SetCursor(0, OLED_ROW_2);
+	ssd1306_WriteString("Len:", Font_11x18, White);
 
-//	itoa(seq_vars[SQ_VAR_LENGTH], value_label, 10);
-//	ssd1306_SetCursor(44, OLED_ROW_2);
-//	ssd1306_WriteString(value_label, Font_11x18, White);
+	itoa(seq_vars[SQ_VAR_LENGTH], value_label, 10);
+	ssd1306_SetCursor(44, OLED_ROW_2);
+	ssd1306_WriteString(value_label, Font_11x18, White);
 
 	ssd1306_SetCursor(88, OLED_ROW_1);
 
@@ -487,7 +487,7 @@ void state_sequencer(void)
 	{
 		if(seq_tim_isr_flag)
 		{
-			if(!seq_note_on)
+			if(seq_note_on)
 			{
 				if(seq_vars[SQ_VAR_STEP] < N_SEQ_STEPS-1)
 				{
@@ -503,16 +503,13 @@ void state_sequencer(void)
 
 				/* Copy note to string for oled display*/
 				itoa(sequence[seq_vars[SQ_VAR_STEP]], midi_note_disp, 10);
-				//strcpy(note_disp, note_to_string[ind]);
 				update_menu();
-				seq_note_on = true;
+				seq_note_on = false;
 			}
 			else
 			{
-
 				midi_note_off(midi_channel, sequence[prev_seq_vars[SQ_VAR_STEP]], kb_vars[KB_VAR_VELOCITY]);
-				HAL_GPIO_TogglePin(OB_LED_PORT, OB_LED_PIN);
-				seq_note_on = false;
+				seq_note_on = true;
 			}
 			seq_tim_isr_flag = false;
 		}
@@ -559,8 +556,17 @@ volatile uint16_t seq_timer_cnt = 0;
 /* Sequencer timer */
 void TIM4_IRQHandler(void)
 {
-	if (TIM4->SR & TIM_SR_UIF)// && !seq_tim_isr_flag)
+	if (TIM4->SR & TIM_SR_UIF)
 	{
+		if(seq_note_on)
+		{
+			TIM4->ARR = (int)(BPM_TO_MS(seq_vars[SQ_VAR_BPM]*2) / MAX_NOTE_LEN) * seq_vars[SQ_VAR_LENGTH];
+		}
+		else
+		{
+			TIM4->ARR = (int)(BPM_TO_MS(seq_vars[SQ_VAR_BPM]*2) / MAX_NOTE_LEN) * (MAX_NOTE_LEN -seq_vars[SQ_VAR_LENGTH]);
+		}
+
 		seq_tim_isr_flag = true;
 		TIM4->CNT = 0;
 		TIM4->SR &= ~(TIM_SR_UIF);
@@ -577,7 +583,7 @@ void sequencer_timer_init(void)
 
 	// Setup to trigger at 1ms interval
 	TIM4->CNT = 0;
-	TIM4->PSC = 48000;
+	TIM4->PSC = 48000-1;
 	TIM4->ARR = BPM_TO_MS(seq_vars[SQ_VAR_BPM]*2);
 
 	TIM4->DIER |= TIM_DIER_UIE; // Enable the hardware interrupt.
@@ -592,7 +598,7 @@ void sequencer_update_bpm(void)
 {
 	if(prev_seq_vars[SQ_VAR_BPM] != seq_vars[SQ_VAR_BPM])
 	{
-		TIM4->ARR = (BPM_TO_MS(seq_vars[SQ_VAR_BPM]*2));// / MAX_NOTE_LEN) * seq_vars[SQ_VAR_LENGTH];
+		TIM4->ARR = (BPM_TO_MS(seq_vars[SQ_VAR_BPM]*2));
 		TIM4->CNT = 0;
 	}
 }
@@ -774,6 +780,7 @@ void update_encoder(TIM_TypeDef *TIMx, uint8_t min, uint8_t max, uint8_t *curr_v
 		{
 			TIM3->CNT = prev_seq[*curr_val]*2;
 			sequence[*curr_val] = TIM3->CNT;
+			midi_note_off(midi_channel, sequence[*curr_val], kb_vars[KB_VAR_VELOCITY]);
 		}
 
 		if(curr_mode == MODE_SEQUENCER && enc_1_var == ENC_SQ_VAR_LENGTH && TIMx == TIM2)
@@ -804,7 +811,7 @@ void handle_encoder_1(void)
 		}
 		case ENC_SQ_VAR_LENGTH:
 		{
-			update_encoder(TIM2, 1, MAX_NOTE_LEN, &seq_vars[SQ_VAR_LENGTH], &prev_seq_vars[SQ_VAR_LENGTH]);
+			update_encoder(TIM2, MIN_NOTE_LEN, MAX_NOTE_LEN, &seq_vars[SQ_VAR_LENGTH], &prev_seq_vars[SQ_VAR_LENGTH]);
 			break;
 		}
 		case ENC_SQ_VAR_STEP:

@@ -152,7 +152,8 @@ void draw_sequencer_step(uint8_t step);
 #define MAX_MIDI_OCTAVES 10
 #define MAX_MIDI_NOTE    127
 #define MAX_VELOCITY     127
-#define MAX_NOTE_LEN     16
+#define MAX_NOTE_LEN     10
+#define MIN_NOTE_LEN     10
 
 #define NUM_SEMITONES    12
 #define NUM_BUTTONS      16
