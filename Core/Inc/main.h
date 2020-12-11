@@ -111,8 +111,6 @@ void key_down_handler(const char key);
 
 /* Sequencer functions */
 void sequencer_timer_init(void);
-void sequencer_timer_start(void);
-void sequencer_timer_stop(void);
 void sequencer_update_bpm(void);
 
 /* Encoder functions */
@@ -153,7 +151,7 @@ void draw_sequencer_step(uint8_t step);
 #define MAX_MIDI_NOTE    127
 #define MAX_VELOCITY     127
 #define MAX_NOTE_LEN     10
-#define MIN_NOTE_LEN     10
+#define MIN_NOTE_LEN     1
 
 #define NUM_SEMITONES    12
 #define NUM_BUTTONS      16

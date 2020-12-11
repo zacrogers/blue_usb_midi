@@ -1,0 +1,194 @@
+EESchema Schematic File Version 4
+EELAYER 30 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 3
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L MCU_ST_STM32F1:STM32F100C8Tx U?
+U 1 1 5FD3C462
+P 6150 3700
+F 0 "U?" H 6100 2111 50  0000 C CNN
+F 1 "STM32F100C8Tx" H 6100 2020 50  0000 C CNN
+F 2 "Package_QFP:LQFP-48_7x7mm_P0.5mm" H 5550 2300 50  0001 R CNN
+F 3 "http://www.st.com/st-web-ui/static/active/en/resource/technical/document/datasheet/CD00251732.pdf" H 6150 3700 50  0001 C CNN
+	1    6150 3700
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:Rotary_Encoder_Switch SW?
+U 1 1 5FD3D94D
+P 9250 2650
+F 0 "SW?" V 9204 2880 50  0000 L CNN
+F 1 "Rotary_Encoder_Switch" V 9295 2880 50  0000 L CNN
+F 2 "" H 9100 2810 50  0001 C CNN
+F 3 "~" H 9250 2910 50  0001 C CNN
+	1    9250 2650
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:Rotary_Encoder_Switch SW?
+U 1 1 5FD3EE44
+P 9350 4700
+F 0 "SW?" V 9304 4930 50  0000 L CNN
+F 1 "Rotary_Encoder_Switch" V 9395 4930 50  0000 L CNN
+F 2 "" H 9200 4860 50  0001 C CNN
+F 3 "~" H 9350 4960 50  0001 C CNN
+	1    9350 4700
+	0    1    1    0   
+$EndComp
+$Sheet
+S 2150 6050 1250 1250
+U 5FD400C3
+F0 "Keypad" 50
+F1 "Keypad.sch" 50
+F2 "Row1" I R 3400 6400 50 
+F3 "Row2" I R 3400 6500 50 
+F4 "Row3" I R 3400 6600 50 
+F5 "Row4" I R 3400 6700 50 
+F6 "Col1" I R 3400 6900 50 
+F7 "Col2" I R 3400 7000 50 
+F8 "Col3" I R 3400 7100 50 
+F9 "Col4" I R 3400 7200 50 
+$EndSheet
+$Comp
+L Device:Crystal Y?
+U 1 1 5FD42C7C
+P 2250 2600
+F 0 "Y?" H 2250 2868 50  0000 C CNN
+F 1 "Crystal" H 2250 2777 50  0000 C CNN
+F 2 "" H 2250 2600 50  0001 C CNN
+F 3 "~" H 2250 2600 50  0001 C CNN
+	1    2250 2600
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C C?
+U 1 1 5FD43310
+P 1850 2950
+F 0 "C?" H 1965 2996 50  0000 L CNN
+F 1 "C" H 1965 2905 50  0000 L CNN
+F 2 "" H 1888 2800 50  0001 C CNN
+F 3 "~" H 1850 2950 50  0001 C CNN
+	1    1850 2950
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C C?
+U 1 1 5FD43807
+P 2600 2950
+F 0 "C?" H 2715 2996 50  0000 L CNN
+F 1 "C" H 2715 2905 50  0000 L CNN
+F 2 "" H 2638 2800 50  0001 C CNN
+F 3 "~" H 2600 2950 50  0001 C CNN
+	1    2600 2950
+	1    0    0    -1  
+$EndComp
+$Sheet
+S 2000 4750 550  550 
+U 5FD44F32
+F0 "SSD1306Oled" 50
+F1 "SSD1306Oled.sch" 50
+F2 "GND" I R 2550 4850 50 
+F3 "+3.3V" I R 2550 4950 50 
+F4 "SDA" I R 2550 5050 50 
+F5 "SCL" I R 2550 5150 50 
+$EndSheet
+$Comp
+L Device:C C?
+U 1 1 5FD4914D
+P 8650 4700
+F 0 "C?" H 8765 4746 50  0000 L CNN
+F 1 "C" H 8765 4655 50  0000 L CNN
+F 2 "" H 8688 4550 50  0001 C CNN
+F 3 "~" H 8650 4700 50  0001 C CNN
+	1    8650 4700
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C C?
+U 1 1 5FD49153
+P 8450 2650
+F 0 "C?" H 8565 2696 50  0000 L CNN
+F 1 "C" H 8565 2605 50  0000 L CNN
+F 2 "" H 8488 2500 50  0001 C CNN
+F 3 "~" H 8450 2650 50  0001 C CNN
+	1    8450 2650
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R?
+U 1 1 5FD4C704
+P 8300 4700
+F 0 "R?" H 8370 4746 50  0000 L CNN
+F 1 "R" H 8370 4655 50  0000 L CNN
+F 2 "" V 8230 4700 50  0001 C CNN
+F 3 "~" H 8300 4700 50  0001 C CNN
+	1    8300 4700
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R?
+U 1 1 5FD4CDC5
+P 9200 4100
+F 0 "R?" H 9270 4146 50  0000 L CNN
+F 1 "R" H 9270 4055 50  0000 L CNN
+F 2 "" V 9130 4100 50  0001 C CNN
+F 3 "~" H 9200 4100 50  0001 C CNN
+	1    9200 4100
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R?
+U 1 1 5FD4D1F0
+P 9500 4100
+F 0 "R?" H 9570 4146 50  0000 L CNN
+F 1 "R" H 9570 4055 50  0000 L CNN
+F 2 "" V 9430 4100 50  0001 C CNN
+F 3 "~" H 9500 4100 50  0001 C CNN
+	1    9500 4100
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R?
+U 1 1 5FD5070C
+P 8150 2650
+F 0 "R?" H 8220 2696 50  0000 L CNN
+F 1 "R" H 8220 2605 50  0000 L CNN
+F 2 "" V 8080 2650 50  0001 C CNN
+F 3 "~" H 8150 2650 50  0001 C CNN
+	1    8150 2650
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R?
+U 1 1 5FD50DFB
+P 9100 2000
+F 0 "R?" H 9170 2046 50  0000 L CNN
+F 1 "R" H 9170 1955 50  0000 L CNN
+F 2 "" V 9030 2000 50  0001 C CNN
+F 3 "~" H 9100 2000 50  0001 C CNN
+	1    9100 2000
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R?
+U 1 1 5FD51B73
+P 9400 2000
+F 0 "R?" H 9470 2046 50  0000 L CNN
+F 1 "R" H 9470 1955 50  0000 L CNN
+F 2 "" V 9330 2000 50  0001 C CNN
+F 3 "~" H 9400 2000 50  0001 C CNN
+	1    9400 2000
+	1    0    0    -1  
+$EndComp
+$EndSCHEMATC
