@@ -564,7 +564,7 @@ void TIM4_IRQHandler(void)
 		}
 		else
 		{
-			TIM4->ARR = (int)(BPM_TO_MS(seq_vars[SQ_VAR_BPM]*2) / MAX_NOTE_LEN) * (MAX_NOTE_LEN -seq_vars[SQ_VAR_LENGTH]);
+			TIM4->ARR = (int)(BPM_TO_MS(seq_vars[SQ_VAR_BPM]*2) / MAX_NOTE_LEN) * (MAX_NOTE_LEN - seq_vars[SQ_VAR_LENGTH]);
 		}
 
 		seq_tim_isr_flag = true;
