@@ -337,9 +337,9 @@ F 3 "" H 5850 5050 50  0001 C CNN
 	1    5850 5050
 	0    -1   -1   0   
 $EndComp
-Text GLabel 5850 4950 0    50   Input ~ 0
-LCD_SDA
 Text GLabel 5850 4850 0    50   Input ~ 0
+LCD_SDA
+Text GLabel 5850 4950 0    50   Input ~ 0
 LCD_SCL
 Text GLabel 8600 3900 0    50   Input ~ 0
 LCD_SDA
